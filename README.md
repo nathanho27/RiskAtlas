@@ -12,3 +12,18 @@ The script downloads daily price data for a small set of equities and saves the 
 data/raw/market_prices.csv
 
 This dataset will later be used for feature engineering and machine learning experiments.
+
+## Feature Engineering (In Progress)
+
+The next stage of the project focuses on generating financial features from historical price data.
+
+These features will be used as inputs for machine learning models and are designed to capture key signals such as momentum, volatility, and trend behavior.
+
+The initial feature set includes:
+
+• Rolling returns over multiple time horizons  
+• Volatility measures based on rolling standard deviation  
+• Moving averages and trend indicators  
+• Relative positioning of price compared to moving averages  
+
+The feature engineering pipeline is currently being developed and will output a structured dataset for modeling.
