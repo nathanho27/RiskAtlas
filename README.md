@@ -27,3 +27,15 @@ The initial feature set includes:
 • Relative positioning of price compared to moving averages  
 
 The feature engineering pipeline is currently being developed and will output a structured dataset for modeling.
+
+## AI Layer (Planned)
+
+The project will incorporate an AI layer to enhance model interpretability and provide natural language insights.
+
+Planned capabilities include:
+
+• Generating explanations for predicted risk signals based on model outputs and feature importance  
+• Summarizing overall market risk conditions and trends  
+• Translating quantitative signals into human-readable insights  
+
+This layer will complement the machine learning models by making predictions more interpretable and actionable.
