@@ -1,17 +1,28 @@
-# RiskAtlas
-Market risk modeling project that analyzes historical equity data to estimate forward-looking risk signals such as drawdowns and volatility regimes. Uses engineered financial features and machine learning models to generate interpretable risk scores through a reproducible Python workflow and interactive Streamlit dashboards.
+# Risk Atlas
 
-## Data Ingestion (Temporary)
+Market risk modeling project focused on analyzing historical equity data to estimate forward-looking risk signals such as drawdowns and volatility regimes.  
+The system is designed as an end-to-end pipeline including data ingestion, feature engineering, machine learning modeling, and an interactive application layer, with plans to incorporate AI-generated explanations.
 
-Right now the project includes a simple script (`stock_load.py`) that pulls historical stock data using the `yfinance` API.
+---
 
-This is just a temporary script to get some initial market data into the project while the rest of the pipeline is being built.
+## Project Structure
 
-The script downloads daily price data for a small set of equities and saves the dataset to:
+- `src/data/` – data ingestion and ticker universe  
+- `src/features/` – feature engineering and label generation  
+- `src/models/` – model training and prediction  
+- `src/ai/` – AI explanation layer (planned)  
+- `src/app/` – Streamlit application (planned)
 
-data/raw/market_prices.csv
+---
 
-This dataset will later be used for feature engineering and machine learning experiments.
+## Status
+
+- Data ingestion: in progress  
+- Feature engineering: in progress  
+- Modeling: planned  
+- AI layer: planned  
+
+---
 
 ## Feature Engineering (In Progress)
 
@@ -21,12 +32,14 @@ These features will be used as inputs for machine learning models and are design
 
 The initial feature set includes:
 
-• Rolling returns over multiple time horizons  
-• Volatility measures based on rolling standard deviation  
-• Moving averages and trend indicators  
-• Relative positioning of price compared to moving averages  
+- Rolling returns over multiple time horizons  
+- Volatility measures based on rolling standard deviation  
+- Moving averages and trend indicators  
+- Relative positioning of price compared to moving averages  
 
 The feature engineering pipeline is currently being developed and will output a structured dataset for modeling.
+
+---
 
 ## AI Layer (Planned)
 
@@ -34,8 +47,8 @@ The project will incorporate an AI layer to enhance model interpretability and p
 
 Planned capabilities include:
 
-• Generating explanations for predicted risk signals based on model outputs and feature importance  
-• Summarizing overall market risk conditions and trends  
-• Translating quantitative signals into human-readable insights  
+- Generating explanations for predicted risk signals based on model outputs and feature importance  
+- Summarizing overall market risk conditions and trends  
+- Translating quantitative signals into human-readable insights  
 
 This layer will complement the machine learning models by making predictions more interpretable and actionable.
