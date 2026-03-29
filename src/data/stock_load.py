@@ -1,4 +1,4 @@
-"""Market Data Pipeline pulls all S&P 500 tickers,downloads prices,and stores in PostgreSQL.Output:prices(date,ticker,adj_close)"""
+"""Market Data Pipeline pulls all S&P 500 tickers,downloads prices,and stores in PostgreSQL.Output:raw_market_prices(date,ticker,adj_close)"""
 
 import pandas as pd
 import yfinance as yf
@@ -29,7 +29,7 @@ def get_market_prices(tickers,start_date="2010-01-01"):
 
     for i in range(0,len(tickers),chunk_size):
         chunk=tickers[i:i+chunk_size]
-        print(f"Downloading {i}->{i+len(chunk)}")
+        print(f"Downloading {i}->{i+len(chunk)} ({round((i+len(chunk))/len(tickers)*100,1)}%)")
 
         try:
             raw=yf.download(chunk,start=start_date,progress=False,threads=False,auto_adjust=True)
@@ -46,35 +46,33 @@ def get_market_prices(tickers,start_date="2010-01-01"):
 
         all_prices.append(prices)
 
-    return pd.concat(all_prices,ignore_index=True)
+    return pd.concat(all_prices,ignore_index=True) if all_prices else pd.DataFrame(columns=["date","ticker","adj_close"])
 
 # store cleaned price data into PostgreSQL and create indexes for faster queries
 def save_to_db(df):
-    conn=get_connection()
-    cur=conn.cursor()
+    with get_connection() as conn:
+        with conn.cursor() as cur:
 
-    df["date"]=pd.to_datetime(df["date"])
-    df["adj_close"]=df["adj_close"].astype(float)
+            df["date"]=pd.to_datetime(df["date"])
+            df["adj_close"]=df["adj_close"].astype(float)
 
-    cur.execute("""DROP TABLE IF EXISTS prices;
-CREATE TABLE prices(
+            cur.execute("""DROP TABLE IF EXISTS raw_market_prices;
+CREATE TABLE raw_market_prices(
     date DATE,
     ticker TEXT,
     adj_close DOUBLE PRECISION
 );""")
 
-    buffer=StringIO()
-    df.to_csv(buffer,index=False,header=False)
-    buffer.seek(0)
+            buffer=StringIO()
+            df.to_csv(buffer,index=False,header=False)
+            buffer.seek(0)
 
-    cur.copy_from(buffer,"prices",sep=",")
+            cur.copy_from(buffer,"raw_market_prices",sep=",")
 
-    cur.execute("CREATE INDEX idx_ticker ON prices(ticker);")
-    cur.execute("CREATE INDEX idx_date ON prices(date);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_ticker ON raw_market_prices(ticker);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_date ON raw_market_prices(date);")
 
-    conn.commit()
-    cur.close()
-    conn.close()
+        conn.commit()
 
 # run full pipeline fetch tickers download prices save to database
 def main():
@@ -82,7 +80,7 @@ def main():
     print(f"Total tickers:{len(tickers)}")
 
     df=get_market_prices(tickers)
-    print(f"Rows:{len(df)}")
+    print(f"Rows:{len(df):,}")
 
     save_to_db(df)
 
