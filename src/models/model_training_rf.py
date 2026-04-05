@@ -1,12 +1,12 @@
-# model_training.py
-# trains logistic regression model to predict risk_event (future 10-day drop)
+# model_training_rf.py
+# trains random forest model to predict risk_event (future 10-day drop)
 
 import pandas as pd
 import psycopg2
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report
 from io import StringIO
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
 
 # load model dataset from postgres
 def load_data():
@@ -36,12 +36,21 @@ def main():
     # chronological split
     X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2,shuffle=False)
 
-    # model
-    model=LogisticRegression(max_iter=1000,class_weight="balanced")
+    # random forest model
+    model=RandomForestClassifier(
+        n_estimators=200,
+        max_depth=10,
+        min_samples_leaf=20,
+        class_weight="balanced",
+        random_state=42,
+        n_jobs=-1
+    )
     model.fit(X_train,y_train)
 
-    # predictions
+    # probabilities
     y_prob=model.predict_proba(X_test)[:,1]
+
+    # binary predictions
     y_pred=(y_prob>0.5).astype(int)
 
     # evaluation
@@ -57,10 +66,10 @@ def main():
     test_df=df.loc[X_test.index].copy()
 
     pred_df=pd.DataFrame({
-    "date":test_df["date"].values,
-    "ticker":test_df["ticker"].values,
-    "risk_prob":y_prob,
-    "risk_pred":y_pred
+        "date":test_df["date"].values,
+        "ticker":test_df["ticker"].values,
+        "risk_prob":y_prob,
+        "risk_pred":y_pred
     })
 
     # write to postgres
