@@ -2,24 +2,7 @@
 
 ## Market Risk Modeling System for Equity Markets
 
-Risk Atlas is an end-to-end financial risk modeling system designed to identify stocks with elevated downside risk using historical S&P 500 data.
-
-The project combines data engineering, SQL-based analytics, and machine learning to transform raw market data into forward-looking risk signals. These signals are designed to support portfolio risk monitoring and market condition analysis through a structured, system-oriented workflow.
-
----
-
-## Table of Contents
-- [Status](#status)
-- [Overview](#overview)
-- [Analytical Objectives](#analytical-objectives)
-- [Data Sources](#data-sources)
-- [Methodology](#methodology)
-- [System Architecture](#system-architecture)
-- [Machine Learning](#machine-learning)
-- [Tools & Technologies](#tools--technologies)
-- [Project Structure](#project-structure)
-- [Future Improvements](#future-improvements)
-- [Outcome](#outcome)
+Market risk modeling system focused on identifying stocks with elevated downside risk using historical S&P 500 data. The project combines Python, PostgreSQL, SQL-based feature engineering, and machine learning to transform raw market data into forward-looking risk predictions.
 
 ---
 
@@ -27,124 +10,141 @@ The project combines data engineering, SQL-based analytics, and machine learning
 
 **In Progress**
 
-The core data pipeline, feature engineering layer, and machine learning models have been implemented.
+The core data pipeline, analytics layer, and machine learning models have been implemented.
 
-The system currently ingests historical market data, builds a SQL-based analytics layer, trains predictive models, and generates risk scores stored in a PostgreSQL database.
+Historical market data is ingested through Python, transformed through a layered PostgreSQL analytics architecture, and used to train machine learning models that estimate downside risk probabilities.
 
-Planned next steps include building an interactive application layer, automating the pipeline, and deploying the system to the cloud.
+Current outputs include engineered financial features, downside-risk labels, model-ready datasets, and prediction tables containing stock-level risk scores.
+
+Planned next steps include building an interactive application layer, automating pipeline execution, cloud deployment, and AI-generated explanations for model outputs.
 
 ---
 
 ## Overview
 
-Risk Atlas is a financial analytics and modeling project focused on understanding and predicting downside risk in equity markets.
+Risk Atlas is a financial analytics and machine learning project focused on modeling downside risk in equity markets.
 
-Rather than analyzing past performance alone, the project frames market risk as a forward-looking problem. Using historical price data, the system engineers features capturing volatility, trend, and market structure, and applies machine learning models to estimate the probability of significant short-term drawdowns.
+Rather than analyzing historical performance alone, the project approaches market risk as a forward-looking prediction problem. Historical stock price data is transformed into volatility, trend, and momentum-based features which are then used to train machine learning models capable of estimating the probability of future downside moves.
 
-The result is a structured pipeline that produces interpretable risk signals at both the individual stock and market level.
+The system is designed as an end-to-end workflow integrating data engineering, SQL analytics, and predictive modeling.
 
 ---
 
 ## Analytical Objectives
 
-- Identify stocks with elevated downside risk over short-term horizons  
-- Model relationships between volatility, trend, and future drawdowns  
-- Build a structured data pipeline integrating Python, SQL, and machine learning  
-- Generate interpretable risk signals that can be used for monitoring and decision-making  
-- Develop a scalable system that can be extended to real-time or automated workflows  
+- Identify stocks with elevated downside risk over short-term horizons
+- Model relationships between volatility, trend, and future drawdowns
+- Generate interpretable risk signals using market data
+- Build an end-to-end financial analytics workflow integrating Python, PostgreSQL, SQL, and machine learning
+- Develop a foundation for automated market risk monitoring
 
 ---
 
 ## Data Sources
 
-- Historical stock price data from Yahoo Finance  
-- S&P 500 constituent data from public sources  
-- Derived datasets generated through SQL transformations  
+- Historical stock price data from Yahoo Finance
+- S&P 500 constituent data from publicly available sources
+- Derived datasets generated through SQL transformations and feature engineering
 
 ---
 
 ## Methodology
 
-- Pull historical price data using Python ingestion scripts  
-- Store raw data in PostgreSQL  
-- Apply SQL transformations to clean, standardize, and structure the data  
-- Compute derived metrics such as daily returns, rolling volatility, and moving averages using SQL window functions  
-- Generate forward-looking labels based on future returns  
-- Train machine learning models to estimate downside risk probabilities  
-- Store model predictions in a database for downstream use  
+- Pull historical market data using Python.
+- Store raw market data in PostgreSQL.
+- Clean and standardize datasets using SQL transformations.
+- Compute derived metrics such as daily returns, rolling volatility, and moving averages using SQL window functions.
+- Generate forward-looking downside-risk labels based on future returns.
+- Train machine learning models to estimate downside-risk probabilities.
+- Store model predictions in PostgreSQL for downstream applications.
 
 ---
 
-## System Architecture
+## Pipeline Architecture
 
-The project follows a layered data architecture:
+The system follows a layered data architecture:
 
 ### Raw Layer
 - `raw_market_prices`
-- Historical daily price data for S&P 500 equities  
+- Historical daily stock price data
 
 ### Staging Layer
 - `stg_market_prices`
-- Cleaned and standardized price data  
+- Cleaned and standardized market data
 
 ### Feature Layer
 - `price_features`
-- Daily returns  
-- Rolling volatility (20, 30, 60 day)  
-- Moving averages (20, 50, 200 day)  
-- Price relative to trend  
+- Daily returns
+- Rolling volatility (20, 30, 60 day)
+- Moving averages (20, 50, 200 day)
+- Price relative to trend
 
 ### Label Layer
 - `labels`
-- Forward returns and risk event definitions  
+- Forward returns
+- Binary downside-risk events
 
 ### Modeling Layer
 - `model_dataset`
-- Combined feature and label dataset used for training  
+- Combined feature and label dataset used for training
 
 ### Prediction Layer
 - `predictions`
-- Model-generated risk probabilities and classifications  
+- Risk probabilities
+- Binary risk classifications
+- Model-generated outputs
 
 ---
 
 ## Machine Learning
 
-The project includes multiple models for predicting downside risk:
+The project currently includes two classification models:
 
-- Logistic Regression (baseline model)  
-- Random Forest (nonlinear model capturing feature interactions)  
+### Logistic Regression
+- Baseline model used for downside-risk prediction
 
-Key modeling considerations:
+### Random Forest
+- Nonlinear model used to capture interactions between volatility, trend, and momentum features
 
-- Class imbalance handled using class weighting  
-- Time-based train/test split to preserve chronological structure  
-- Evaluation focused on recall for rare risk events  
+Key modeling considerations include:
 
-The final output of the modeling layer is a probability representing the likelihood of a stock experiencing a significant drawdown over a 10-day horizon.
+- Time-based train/test splits
+- Class imbalance handling through class weighting
+- Evaluation focused on identifying rare downside-risk events
+
+The final model output is a probability representing the likelihood of a significant downside move over a future 10-day horizon.
 
 ---
 
 ## Tools & Technologies
 
-- Python  
-- PostgreSQL  
-- SQL  
-- pandas  
-- scikit-learn  
-- Git & GitHub  
+- Python
+- PostgreSQL
+- SQL
+- pandas
+- scikit-learn
+- yfinance
+- Git & GitHub
 
 ---
 
 ## Project Structure
+
+```text
 RiskAtlas/
 ├── src/
 │   ├── data/
 │   │   └── stock_load.py
+│   │
 │   ├── models/
 │   │   ├── model_training.py
 │   │   └── model_training_rf.py
-│   └── app/ (planned)
+│   │
+│   ├── app/
+│   │   └── app.py (planned)
+│   │
+│   └── ai/
+│       └── ai_explanations.py (planned)
 │
 ├── sql/
 │   ├── staging/
@@ -153,19 +153,34 @@ RiskAtlas/
 │   └── marts/
 │
 └── README.md
+```
 
 ---
 
 ## Future Improvements
 
-- Streamlit application for interactive risk exploration  
-- Automated pipeline execution (scheduled data and model updates)  
-- Cloud deployment of database and application layer  
-- API layer for model inference  
-- AI-generated explanations for risk signals  
+### Application Layer
+- Streamlit dashboard for risk monitoring
+- Interactive stock lookup
+- Historical risk visualization
+
+### Automation
+- Scheduled data ingestion
+- Automated model retraining
+- Daily risk prediction updates
+
+### Cloud Deployment
+- Hosted PostgreSQL database
+- Cloud-based application deployment
+- End-to-end automated pipeline execution
+
+### AI Layer
+- AI-generated explanations for risk predictions
+- Natural language summaries of market conditions
+- Model interpretation and reasoning support
 
 ---
 
 ## Outcome
 
-Designed and built an end-to-end risk modeling system that transforms raw market data into predictive risk signals. The project integrates data engineering, SQL-based analytics, and machine learning into a structured pipeline capable of generating forward-looking insights for equity market risk.
+Built an end-to-end market risk modeling system that transforms raw market data into predictive risk signals using SQL-based feature engineering and machine learning. The project serves as a foundation for a production-style financial analytics platform capable of generating forward-looking risk assessments for individual stocks and broader market conditions.
