@@ -131,28 +131,57 @@ The final model output is a probability representing the likelihood of a signifi
 ## Project Structure
 
 ```text
+
 RiskAtlas/
+
+├── data/
+│   ├── output/
+│   └── processed/
+│
+├── sql/
+│   ├── schema/
+│   │   └── raw_market_prices.sql
+│   │
+│   ├── staging/
+│   │   └── stg_market_prices.sql
+│   │
+│   ├── features/
+│   │   ├── price_features.sql
+│   │   ├── label_generation.sql
+│   │   └── model_dataset.sql
+│   │
+│   ├── analytics/
+│   │   ├── risk_signals.sql
+│   │   └── market_metrics.sql
+│   │
+│   └── marts/
+│       └── market_summary.sql
+│
 ├── src/
+│   ├── ai/
+│   │   └── ai_explanations.py
+│   │
+│   ├── app/
+│   │   └── app.py
+│   │
 │   ├── data/
 │   │   └── stock_load.py
 │   │
-│   ├── models/
-│   │   ├── model_training.py
-│   │   └── model_training_rf.py
-│   │
-│   ├── app/
-│   │   └── app.py (planned)
-│   │
-│   └── ai/
-│       └── ai_explanations.py (planned)
-│
-├── sql/
-│   ├── staging/
 │   ├── features/
-│   ├── analytics/
-│   └── marts/
+│   │   ├── feature_engineering.py
+│   │   └── label_generation.py
+│   │
+│   ├── models/
+│   │   ├── model_training_logistic.py
+│   │   ├── model_training_rf.py
+│   │   └── prediction.py
+│   │
+│   └── __init__.py
 │
-└── README.md
+├── run_pipeline.py
+├── README.md
+└── .gitignore
+
 ```
 
 ---
