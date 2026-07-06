@@ -2,7 +2,7 @@
 
 ## Market Risk Modeling System for Equity Markets
 
-Market risk modeling system focused on identifying stocks with elevated downside risk using historical S&P 500 data. The project combines Python, PostgreSQL, SQL-based feature engineering, and machine learning to transform raw market data into forward-looking risk predictions.
+Market risk modeling system that uses historical S&P 500 data to identify stocks with elevated downside risk. The project combines Python, PostgreSQL, SQL-based feature engineering, machine learning, and AI-generated explanations to transform raw market data into forward-looking risk predictions with interpretable risk summaries.
 
 ---
 
