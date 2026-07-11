@@ -13,6 +13,7 @@ The project combines Python data pipelines, PostgreSQL, SQL-based feature engine
 - [Project Status](#project-status)
 - [Business Problem](#business-problem)
 - [System Overview](#system-overview)
+- [Key Features](#key-features)
 - [Analytical Objectives](#analytical-objectives)
 - [Data Sources](#data-sources)
 - [Methodology](#methodology)
@@ -40,10 +41,25 @@ The core data engineering and machine learning pipeline has been implemented.
 - SQL-based data cleaning and transformation
 - Financial feature engineering
 - Downside-risk label generation
-- Logistic regression model
-- Random forest model
+- Logistic Regression baseline model
+- Random Forest benchmark model
+- Chronological train / validation / test framework
+- Validation-based threshold optimization
 - Risk probability generation
 - Prediction storage in PostgreSQL
+- Model artifact persistence
+
+### Latest Results
+
+| Model | ROC-AUC | PR-AUC |
+|---------|---------:|---------:|
+| Logistic Regression V2 | **0.6130** | **0.2028** |
+| Random Forest V2 | 0.6120 | 0.1987 |
+
+Training observations: ~1.24 million
+Validation observations: ~287 thousand
+Testing observations: ~295 thousand
+Current production model: **Logistic Regression V2**
 
 ### In Development
 
@@ -105,6 +121,19 @@ The project integrates data engineering, analytics engineering, machine learning
 
 ---
 
+## Key Features
+
+- End-to-end market risk analytics pipeline
+- PostgreSQL-based feature engineering
+- 1.2M+ training observations
+- Momentum, volatility, trend, and downside-risk modeling
+- Logistic Regression and Random Forest benchmarking
+- Forward-looking downside-risk prediction
+- Prediction persistence for application consumption
+- Streamlit dashboard integration (in progress)
+
+---
+
 ## Analytical Objectives
 
 - Identify stocks with elevated downside risk
@@ -159,10 +188,14 @@ SQL transformations standardize ticker symbols and prepare clean datasets for do
 Historical prices are transformed into predictive market indicators including:
 
 - Daily returns
-- Rolling volatility
-- Moving averages
-- Trend indicators
-- Relative price measures
+- 5-day, 20-day, and 60-day momentum
+- Rolling volatility (20, 30, and 60 day)
+- Downside volatility
+- Negative-return frequency
+- Worst trailing return
+- Distance from 52-week highs
+- Drawdown from recent highs
+- Moving-average trend measures
 
 ### 4. Label Generation
 
@@ -247,23 +280,34 @@ Stores:
 
 ## Machine Learning
 
-### Logistic Regression
+### Logistic Regression V2
 
-Provides an interpretable baseline model for downside-risk prediction.
+The current production model uses engineered momentum, volatility, trend, and downside-risk features to estimate future downside risk.
 
-### Random Forest
+Performance:
 
-Captures nonlinear relationships between volatility, trend, momentum, and future downside events.
+- ROC-AUC: 0.6130
+- PR-AUC: 0.2028
+
+### Random Forest V2
+
+A nonlinear benchmark model used to compare performance against the logistic baseline.
+
+Performance:
+
+- ROC-AUC: 0.6120
+- PR-AUC: 0.1987
 
 ### Modeling Considerations
 
-- Time-based train/test splits
+- Chronological train / validation / test splits
 - Class imbalance handling
 - Probability-based predictions
-- Focus on downside-event detection
-- Comparison of baseline and nonlinear models
+- Validation-based threshold optimization
+- Feature engineering experimentation
+- Comparison of linear and nonlinear models
 
-The primary objective is identifying downside-risk events rather than maximizing classification accuracy.
+The primary objective is identifying elevated downside-risk events rather than maximizing classification accuracy.
 
 ---
 
@@ -351,30 +395,41 @@ The Streamlit application is expected to provide:
 
 ## Project Structure
 
+## Project Structure
+
 ```text
 RiskAtlas/
 ├── data/
 │   ├── output/
 │   └── processed/
 │
+├── models/
+│   ├── logistic_risk_model.joblib
+│   ├── logistic_risk_model_v2.joblib
+│   ├── random_forest_risk_model.joblib
+│   └── random_forest_risk_model_v2.joblib
+│
 ├── sql/
+│   ├── analytics/
+│   │   ├── market_metrics.sql
+│   │   └── risk_signals.sql
+│   │
+│   ├── features/
+│   │   ├── label_generation.sql
+│   │   ├── model_dataset.sql
+│   │   └── price_features.sql
+│   │
+│   ├── marts/
+│   │   └── market_summary.sql
+│   │
+│   ├── models/
+│   │   └── model_dataset_v2.sql
+│   │
 │   ├── schema/
 │   │   └── raw_market_prices.sql
 │   │
-│   ├── staging/
-│   │   └── stg_market_prices.sql
-│   │
-│   ├── features/
-│   │   ├── price_features.sql
-│   │   ├── label_generation.sql
-│   │   └── model_dataset.sql
-│   │
-│   ├── analytics/
-│   │   ├── risk_signals.sql
-│   │   └── market_metrics.sql
-│   │
-│   └── marts/
-│       └── market_summary.sql
+│   └── staging/
+│       └── stg_market_prices.sql
 │
 ├── src/
 │   ├── ai/
@@ -388,12 +443,13 @@ RiskAtlas/
 │   │
 │   ├── models/
 │   │   ├── model_training_logistic.py
+│   │   ├── model_training_logistic_v2.py
 │   │   ├── model_training_rf.py
+│   │   ├── model_training_rf_v2.py
 │   │   └── prediction.py
 │   │
 │   └── __init__.py
 │
-├── run_pipeline.py
 ├── README.md
 └── .gitignore
 ```
@@ -444,32 +500,46 @@ python src/data/stock_load.py
 
 ### Build SQL Layers
 
-Execute SQL scripts:
+Execute the SQL pipeline in order:
 
-```text
-sql/staging/stg_market_prices.sql
-sql/features/price_features.sql
-sql/features/label_generation.sql
-sql/features/model_dataset.sql
+```bash
+psql -d risk_atlas -f sql/staging/stg_market_prices.sql
+
+psql -d risk_atlas -f sql/features/price_features.sql
+
+psql -d risk_atlas -f sql/features/label_generation.sql
+
+psql -d risk_atlas -f sql/analytics/risk_signals.sql
+
+psql -d risk_atlas -f sql/analytics/market_metrics.sql
+
+psql -d risk_atlas -f sql/features/model_dataset.sql
+
+psql -d risk_atlas -f sql/models/model_dataset_v2.sql
+
+psql -d risk_atlas -f sql/marts/market_summary.sql
 ```
 
-### Train Models
+### Train Baseline Models
 
 ```bash
 python src/models/model_training_logistic.py
+
 python src/models/model_training_rf.py
+```
+
+### Train Enhanced V2 Models
+
+```bash
+python src/models/model_training_logistic_v2.py
+
+python src/models/model_training_rf_v2.py
 ```
 
 ### Generate Predictions
 
 ```bash
 python src/models/prediction.py
-```
-
-### Run Entire Pipeline
-
-```bash
-python run_pipeline.py
 ```
 
 ### Launch Application
