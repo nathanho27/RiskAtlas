@@ -413,6 +413,7 @@ RiskAtlas/
 │   ├── analytics/
 │   │   ├── market_metrics.sql
 │   │   └── risk_signals.sql
+│   │   └── inference_dataset.sql
 │   │
 │   ├── features/
 │   │   ├── label_generation.sql
