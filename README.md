@@ -386,10 +386,6 @@ RiskAtlas/
 │   ├── data/
 │   │   └── stock_load.py
 │   │
-│   ├── features/
-│   │   ├── feature_engineering.py
-│   │   └── label_generation.py
-│   │
 │   ├── models/
 │   │   ├── model_training_logistic.py
 │   │   ├── model_training_rf.py
