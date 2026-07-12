@@ -1,8 +1,12 @@
-import os
-
-import pandas as pd
-import psycopg2
 import streamlit as st
+
+from data_access import (
+    clear_prediction_cache,
+    load_predictions,
+)
+from views.model_insights import render_model_insights
+from views.overview import render_overview
+from views.stock_lookup import render_stock_lookup
 
 
 st.set_page_config(
@@ -11,87 +15,205 @@ st.set_page_config(
     layout="wide",
 )
 
-
 st.markdown(
     """
     <style>
+    :root {
+        --background: #07111f;
+        --surface: #0d1828;
+        --surface-light: #132238;
+        --border: #20324a;
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --accent: #38bdf8;
+    }
+
     .stApp {
-        background-color: #080c14;
+        background:
+            radial-gradient(
+                circle at top left,
+                rgba(56, 189, 248, 0.08),
+                transparent 30%
+            ),
+            #07111f;
+        color: var(--text-primary);
     }
 
     .block-container {
-        max-width: 1450px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
+        max-width: 1420px;
+        padding-top: 5rem;
+        padding-bottom: 4rem;
     }
 
     h1 {
-        font-size: 3rem !important;
-        font-weight: 750 !important;
-        letter-spacing: -0.04em;
-        margin-bottom: 0 !important;
+        font-size: 3.2rem !important;
+        font-weight: 800 !important;
+        line-height: 1.1 !important;
+        letter-spacing: -0.05em;
+        margin-top: 0 !important;
+        margin-bottom: 0.25rem !important;
+        padding-bottom: 0.15rem !important;
+        color: #f8fafc !important;
     }
 
-    h2,
+    h2 {
+        font-size: 1.7rem !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.03em;
+        color: #f8fafc !important;
+        margin-top: 1.5rem !important;
+    }
+
     h3 {
-        letter-spacing: -0.025em;
+        color: #e2e8f0 !important;
+        letter-spacing: -0.02em;
+    }
+
+    p,
+    label,
+    .stCaption {
+        color: var(--text-secondary);
     }
 
     [data-testid="stMetric"] {
-        background-color: #111827;
-        border: 1px solid #263247;
-        border-radius: 14px;
-        padding: 1rem 1.15rem;
-        min-height: 120px;
+        background:
+            linear-gradient(
+                145deg,
+                rgba(19, 34, 56, 0.95),
+                rgba(13, 24, 40, 0.95)
+            );
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.15rem 1.25rem;
+        min-height: 125px;
+        box-shadow:
+            0 12px 30px rgba(0, 0, 0, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    [data-testid="stMetric"]:hover {
+        border-color: rgba(56, 189, 248, 0.45);
+        transform: translateY(-1px);
+        transition: 0.2s ease;
     }
 
     [data-testid="stMetricLabel"] {
         color: #94a3b8;
-        font-size: 0.78rem;
-        font-weight: 650;
-        letter-spacing: 0.04em;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
     }
 
     [data-testid="stMetricValue"] {
         color: #f8fafc;
         font-size: 2rem;
-        font-weight: 700;
+        font-weight: 750;
+        letter-spacing: -0.03em;
     }
 
     [data-baseweb="tab-list"] {
-        gap: 1.5rem;
-        border-bottom: 1px solid #263247;
+        gap: 2rem;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 1rem;
     }
 
     [data-baseweb="tab"] {
         height: 48px;
         padding-left: 0;
         padding-right: 0;
-        font-weight: 600;
+        font-weight: 650;
+        color: #94a3b8;
+    }
+
+    [aria-selected="true"][data-baseweb="tab"] {
+        color: #38bdf8 !important;
     }
 
     [data-baseweb="select"] > div {
-        background-color: #111827;
-        border-color: #263247;
-        border-radius: 10px;
-        min-height: 46px;
+        background-color: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        min-height: 48px;
+    }
+
+    [data-baseweb="select"] > div:hover {
+        border-color: rgba(56, 189, 248, 0.5);
     }
 
     div[data-testid="stDataFrame"] {
-        border: 1px solid #263247;
-        border-radius: 14px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
         overflow: hidden;
+        background-color: var(--surface);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.14);
     }
 
     [data-testid="stAlert"] {
-        border-radius: 12px;
+        background-color: rgba(19, 34, 56, 0.92);
+        border: 1px solid var(--border);
+        border-radius: 14px;
     }
 
     [data-testid="stButton"] button {
-        border-radius: 10px;
+        border-radius: 12px;
         min-height: 44px;
-        font-weight: 600;
+        font-weight: 650;
+        border: 1px solid var(--border);
+        background-color: var(--surface-light);
+    }
+
+    [data-testid="stButton"] button:hover {
+        border-color: #38bdf8;
+        color: #38bdf8;
+    }
+
+    .riskatlas-eyebrow {
+        color: #38bdf8;
+        font-size: 0.75rem;
+        font-weight: 750;
+        line-height: 1.4;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+    .riskatlas-subtitle {
+        color: #94a3b8;
+        font-size: 1rem;
+        margin-top: 0.35rem;
+    }
+
+    .risk-badge {
+        display: inline-block;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 750;
+        letter-spacing: 0.04em;
+    }
+
+    .risk-low {
+        color: #86efac;
+        background-color: rgba(34, 197, 94, 0.12);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .risk-moderate {
+        color: #fde68a;
+        background-color: rgba(234, 179, 8, 0.12);
+        border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .risk-high {
+        color: #fdba74;
+        background-color: rgba(249, 115, 22, 0.12);
+        border: 1px solid rgba(249, 115, 22, 0.3);
+    }
+
+    .risk-critical {
+        color: #fca5a5;
+        background-color: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.3);
     }
 
     #MainMenu {
@@ -107,621 +229,76 @@ st.markdown(
 )
 
 
-@st.cache_data(
-    ttl=300,
-    show_spinner=False,
-)
-def load_predictions():
-    database_url = os.getenv(
-        "DATABASE_URL"
-    )
-
-    if not database_url:
-        raise ValueError(
-            "DATABASE_URL is not set."
-        )
-
-    connection = None
-
-    query = """
-        SELECT
-            date,
-            ticker,
-            adj_close,
-            risk_score,
-            risk_pred,
-            risk_level,
-            model_name,
-            generated_at,
-            risk_percentile
-        FROM current_risk_predictions
-        ORDER BY
-            risk_score DESC,
-            ticker ASC;
-    """
-
-    try:
-        connection = psycopg2.connect(
-            database_url,
-            connect_timeout=10,
-        )
-
-        predictions = pd.read_sql_query(
-            query,
-            connection,
-        )
-
-    finally:
-        if connection is not None:
-            connection.close()
-
-    if predictions.empty:
-        return predictions
-
-    predictions["ticker"] = (
-        predictions["ticker"]
-        .astype(str)
-        .str.strip()
-        .str.upper()
-    )
-
-    predictions["risk_level"] = (
-        predictions["risk_level"]
-        .astype(str)
-        .str.strip()
-        .str.title()
-    )
-
-    predictions["date"] = pd.to_datetime(
-        predictions["date"],
-        errors="coerce",
-    )
-
-    predictions["generated_at"] = (
-        pd.to_datetime(
-            predictions["generated_at"],
-            errors="coerce",
-        )
-    )
-
-    numeric_columns = [
-        "adj_close",
-        "risk_score",
-        "risk_pred",
-        "risk_percentile",
-    ]
-
-    for column in numeric_columns:
-        predictions[column] = (
-            pd.to_numeric(
-                predictions[column],
-                errors="coerce",
-            )
-        )
-
-    predictions = predictions.dropna(
-        subset=[
-            "date",
-            "ticker",
-            "adj_close",
-            "risk_score",
-            "risk_level",
-            "risk_percentile",
-        ]
-    )
-
-    predictions = (
-        predictions
-        .sort_values(
-            by=[
-                "ticker",
-                "generated_at",
-                "date",
-            ],
-            ascending=[
-                True,
-                False,
-                False,
-            ],
-        )
-        .drop_duplicates(
-            subset=["ticker"],
-            keep="first",
-        )
-        .sort_values(
-            by="risk_score",
-            ascending=False,
-        )
-        .reset_index(drop=True)
-    )
-
-    return predictions
-
-
-def get_risk_explanation(stock):
-    risk_level = stock["risk_level"]
-
-    if risk_level == "Critical":
-        return (
-            "This stock currently ranks among the "
-            "highest-risk stocks tracked by RiskAtlas."
-        )
-
-    if risk_level == "High":
-        return (
-            "This stock currently shows elevated "
-            "downside-risk conditions relative to "
-            "most tracked stocks."
-        )
-
-    if risk_level == "Moderate":
-        return (
-            "This stock shows some elevated risk, "
-            "but it is not currently among the "
-            "highest-risk stocks."
-        )
-
-    return (
-        "This stock currently shows relatively "
-        "limited downside-risk pressure."
-    )
-
-
-def format_timestamp(timestamp):
-    if pd.isna(timestamp):
-        return "Unavailable"
-
-    return timestamp.strftime(
-        "%Y-%m-%d %H:%M"
-    )
-
-
-def initialize_predictions():
-    if "predictions" in st.session_state:
-        return
-
-    with st.spinner(
-        "Loading RiskAtlas data..."
-    ):
-        st.session_state.predictions = (
-            load_predictions()
-        )
-
-
-def validate_ticker_state(
-    ticker_options,
-):
-    if not ticker_options:
-        return
-
-    default_ticker = (
-        "NVDA"
-        if "NVDA" in ticker_options
-        else ticker_options[0]
-    )
-
-    current_ticker = (
-        st.session_state.get(
-            "ticker_selector"
-        )
-    )
-
-    if current_ticker not in ticker_options:
-        st.session_state.ticker_selector = (
-            default_ticker
-        )
-
-
-def refresh_predictions():
-    try:
-        load_predictions.clear()
-
-        with st.spinner(
-            "Refreshing predictions..."
-        ):
-            refreshed_predictions = (
-                load_predictions()
-            )
-
-        if refreshed_predictions.empty:
-            st.warning(
-                "Refresh returned no predictions. "
-                "The existing data was preserved."
-            )
-            return
-
-        st.session_state.predictions = (
-            refreshed_predictions
-        )
-
-        refreshed_tickers = (
-            refreshed_predictions[
-                "ticker"
-            ]
-            .dropna()
-            .unique()
-            .tolist()
-        )
-
-        current_ticker = (
-            st.session_state.get(
-                "ticker_selector"
-            )
-        )
-
-        if current_ticker not in refreshed_tickers:
-            st.session_state.ticker_selector = (
-                "NVDA"
-                if "NVDA" in refreshed_tickers
-                else refreshed_tickers[0]
-            )
-
-        st.rerun()
-
-    except Exception as error:
-        st.error(
-            "Unable to refresh RiskAtlas data. "
-            f"The existing data was preserved: {error}"
-        )
-
-
-try:
-    initialize_predictions()
-
-except Exception as error:
-    st.error(
-        f"Unable to load RiskAtlas data: {error}"
-    )
-    st.stop()
-
-
-df = st.session_state.predictions
-
-
-if df.empty:
-    st.warning(
-        "No predictions were found."
-    )
-    st.stop()
-
-
-ticker_options = sorted(
-    df["ticker"]
-    .dropna()
-    .unique()
-    .tolist()
-)
-
-
-if not ticker_options:
-    st.warning(
-        "No valid tickers were found."
-    )
-    st.stop()
-
-
-validate_ticker_state(
-    ticker_options
-)
-
-
-stocks_tracked = df["ticker"].nunique()
-
-critical_count = (
-    df["risk_level"]
-    .eq("Critical")
-    .sum()
-)
-
-high_count = (
-    df["risk_level"]
-    .eq("High")
-    .sum()
-)
-
-prediction_date = df["date"].max()
-
-last_updated = df["generated_at"].max()
-
-
-header_col, refresh_col = st.columns(
-    [5, 1]
-)
-
+header_col, refresh_col = st.columns([5, 1])
 
 with header_col:
-    st.title("RiskAtlas")
-
-    st.caption(
-        "AI-Powered Stock Risk Intelligence"
+    st.markdown(
+        """
+        <div class="riskatlas-eyebrow">
+            Market Risk Intelligence
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
+    st.title("RiskAtlas")
+
+    st.markdown(
+        """
+        <div class="riskatlas-subtitle">
+            Forward-looking downside risk signals across the S&P 500
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 with refresh_col:
     st.write("")
 
-    st.button(
+    refresh_clicked = st.button(
         "Refresh Data",
         use_container_width=True,
         type="secondary",
-        on_click=refresh_predictions,
     )
 
 
-overview_tab, lookup_tab, model_tab = (
-    st.tabs(
-        [
-            "Overview",
-            "Stock Lookup",
-            "Model Insights",
-        ]
+if refresh_clicked:
+    clear_prediction_cache()
+
+
+try:
+    with st.spinner("Loading RiskAtlas data..."):
+        predictions = load_predictions()
+
+except Exception as error:
+    st.error("Unable to load RiskAtlas data.")
+    st.code(str(error), language="text")
+    st.stop()
+
+
+if predictions.empty:
+    st.warning(
+        "The database query completed, but no predictions were returned."
     )
+    st.stop()
+
+
+overview_tab, lookup_tab, model_tab = st.tabs(
+    [
+        "Overview",
+        "Stock Lookup",
+        "Model Insights",
+    ]
 )
 
 
 with overview_tab:
-    st.subheader(
-        "Market Overview"
-    )
-
-    col1, col2, col3, col4 = (
-        st.columns(
-            4,
-            gap="medium",
-        )
-    )
-
-    with col1:
-        st.metric(
-            "Stocks Tracked",
-            f"{stocks_tracked:,}",
-        )
-
-    with col2:
-        st.metric(
-            "Critical Risk",
-            f"{critical_count:,}",
-        )
-
-    with col3:
-        st.metric(
-            "High Risk",
-            f"{high_count:,}",
-        )
-
-    with col4:
-        st.metric(
-            "Prediction Date",
-            prediction_date.strftime(
-                "%Y-%m-%d"
-            ),
-        )
-
-    st.subheader(
-        "Top Risk Stocks"
-    )
-
-    top_risk = (
-        df[
-            [
-                "ticker",
-                "adj_close",
-                "risk_score",
-                "risk_percentile",
-                "risk_level",
-            ]
-        ]
-        .head(15)
-        .copy()
-    )
-
-    top_risk["adj_close"] = (
-        top_risk["adj_close"]
-        .map(
-            lambda value: (
-                f"${value:,.2f}"
-            )
-        )
-    )
-
-    top_risk["risk_score"] = (
-        top_risk["risk_score"]
-        .mul(100)
-        .round(1)
-    )
-
-    top_risk["risk_percentile"] = (
-        top_risk[
-            "risk_percentile"
-        ]
-        .mul(100)
-        .map(
-            lambda value: (
-                f"{value:.1f}%"
-            )
-        )
-    )
-
-    top_risk = top_risk.rename(
-        columns={
-            "ticker": "Ticker",
-            "adj_close": "Price",
-            "risk_score": "Risk Score",
-            "risk_percentile": (
-                "Percentile"
-            ),
-            "risk_level": "Risk Level",
-        }
-    )
-
-    st.dataframe(
-        top_risk,
-        width="stretch",
-        hide_index=True,
-        height=560,
-    )
+    render_overview(predictions)
 
 
 with lookup_tab:
-    st.subheader(
-        "Stock Lookup"
-    )
-
-    st.selectbox(
-        "Select a ticker",
-        options=ticker_options,
-        key="ticker_selector",
-    )
-
-    selected_ticker = (
-        st.session_state[
-            "ticker_selector"
-        ]
-    )
-
-    stock_rows = df.loc[
-        df["ticker"].eq(
-            selected_ticker
-        )
-    ]
-
-    if stock_rows.empty:
-        st.warning(
-            "The selected ticker is no longer "
-            "available. Select another ticker."
-        )
-
-    else:
-        stock = stock_rows.iloc[0]
-
-        col1, col2, col3, col4 = (
-            st.columns(
-                4,
-                gap="medium",
-            )
-        )
-
-        with col1:
-            st.metric(
-                "Risk Score",
-                (
-                    f"{stock['risk_score'] * 100:.1f}"
-                ),
-            )
-
-        with col2:
-            st.metric(
-                "Risk Percentile",
-                (
-                    f"{stock['risk_percentile'] * 100:.1f}%"
-                ),
-            )
-
-        with col3:
-            st.metric(
-                "Risk Level",
-                stock["risk_level"],
-            )
-
-        with col4:
-            st.metric(
-                "Latest Price",
-                (
-                    f"${stock['adj_close']:,.2f}"
-                ),
-            )
-
-        st.subheader(
-            "Risk Explanation"
-        )
-
-        explanation = (
-            get_risk_explanation(
-                stock
-            )
-        )
-
-        st.info(
-            f"{selected_ticker} is currently "
-            f"classified as "
-            f"{stock['risk_level']} Risk with "
-            f"a risk score of "
-            f"{stock['risk_score'] * 100:.1f}."
-            "\n\n"
-            f"{explanation}"
-            "\n\n"
-            "Its score ranks above "
-            f"{stock['risk_percentile'] * 100:.1f}% "
-            "of stocks tracked by RiskAtlas."
-        )
-
-        st.caption(
-            "This is a relative risk signal, "
-            "not a prediction that the stock "
-            "will decline with certainty."
-        )
+    render_stock_lookup(predictions)
 
 
 with model_tab:
-    st.subheader(
-        "Model Insights"
-    )
-
-    col1, col2, col3 = st.columns(
-        3,
-        gap="medium",
-    )
-
-    with col1:
-        st.metric(
-            "ROC-AUC",
-            "0.6130",
-        )
-
-    with col2:
-        st.metric(
-            "PR-AUC",
-            "0.2028",
-        )
-
-    with col3:
-        st.metric(
-            "Features",
-            "14",
-        )
-
-    model_info = pd.DataFrame(
-        {
-            "Field": [
-                "Model Type",
-                "Model Version",
-                "Prediction Horizon",
-                "Ranking Method",
-                "Training Dataset",
-                "Latest Prediction Date",
-                "Last Updated",
-            ],
-            "Value": [
-                "Logistic Regression",
-                "V2",
-                "10 trading days",
-                (
-                    "Cross-sectional "
-                    "percentile"
-                ),
-                "model_dataset_v2",
-                prediction_date.strftime(
-                    "%Y-%m-%d"
-                ),
-                format_timestamp(
-                    last_updated
-                ),
-            ],
-        }
-    )
-
-    st.dataframe(
-        model_info,
-        width="stretch",
-        hide_index=True,
-    )
+    render_model_insights(predictions)
