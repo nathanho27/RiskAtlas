@@ -1,36 +1,70 @@
 # RiskAtlas
 
-## AI-Powered Stock Risk Intelligence Platform
+## Context-Aware Stock Risk Intelligence Platform
 
 RiskAtlas is an end-to-end market risk intelligence system designed to identify stocks exhibiting elevated downside-risk conditions.
-
-The project combines data engineering, SQL analytics, machine learning, explainability, and AI-powered interpretation into a single production-style workflow.
 
 Rather than simply describing what has already happened in the market, RiskAtlas attempts to answer a more useful question:
 
 > Which stocks currently show the highest modeled downside risk, how unusual is that risk, and what signals are driving it?
 
-The system transforms raw market data into stock-level risk scores, risk rankings, and eventually AI-generated explanations that help users understand why a stock is being flagged.
+The project combines data engineering, SQL analytics, feature engineering, machine learning, risk scoring, visualization, and AI-powered explainability into a single production-style workflow.
+
+What started as a simple stock-risk prediction model evolved into a context-aware intelligence platform that incorporates market regimes, market breadth, sector-relative performance, and market sensitivity to better understand downside risk.
 
 ---
 
 ## Table of Contents
 
+- [Project Overview](#project-overview)
 - [Current Status](#current-status)
 - [Latest Results](#latest-results)
+- [Key Findings](#key-findings)
 - [Why I Built This](#why-i-built-this)
 - [Business Problem](#business-problem)
 - [System Architecture](#system-architecture)
 - [How RiskAtlas Works](#how-riskatlas-works)
+- [Context-Aware Modeling (V3)](#context-aware-modeling-v3)
 - [Streamlit Application](#streamlit-application)
 - [AI Explanation Layer](#ai-explanation-layer)
-- [RiskAtlas V3](#riskatlas-v3)
 - [Future Modeling](#future-modeling)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [How To Run](#how-to-run)
 - [Future Development](#future-development)
-- [Notes](#notes)
+
+---
+
+## Project Overview
+
+Most stock dashboards are descriptive.
+
+They tell you:
+
+- What a stock returned
+- How volatile it was
+- Whether it is above or below a moving average
+- What happened yesterday
+
+But they do not answer:
+
+> Which stocks currently appear most vulnerable?
+
+RiskAtlas approaches this as a predictive modeling problem.
+
+Historical market behavior is transformed into engineered features and used to estimate whether a stock is currently exhibiting conditions associated with elevated future downside risk.
+
+The goal is not to predict exact returns.
+
+The goal is to identify unusually risky conditions, rank stocks relative to the broader market, and surface signals that may warrant further investigation.
+
+Potential use cases include:
+
+- Portfolio monitoring
+- Risk screening
+- Equity research
+- Market surveillance
+- Early identification of deteriorating conditions
 
 ---
 
@@ -50,7 +84,14 @@ The system transforms raw market data into stock-level risk scores, risk ranking
 - Validation-based threshold optimization
 - Daily risk prediction generation
 - PostgreSQL prediction storage
-- Initial Streamlit dashboard prototype
+- Streamlit dashboard prototype
+- Context-aware V3 feature engineering
+- Market regime modeling
+- Market breadth analytics
+- Sector-relative feature framework
+- XGBoost benchmarking
+- LightGBM benchmarking
+- Random Forest hyperparameter tuning
 
 ### In Development
 
@@ -65,23 +106,66 @@ The system transforms raw market data into stock-level risk scores, risk ranking
 
 ## Latest Results
 
-| Model | ROC-AUC | PR-AUC |
-|---|---:|---:|
-| Logistic Regression V2 | **0.6130** | **0.2028** |
-| Random Forest V2 | 0.6120 | 0.1987 |
-
 ### Production Model
 
-**Logistic Regression V2**
+| Model | ROC-AUC | PR-AUC |
+|---|---:|---:|
+| Logistic Regression V2 | 0.6130 | 0.2028 |
 
-Current universe:
+RiskAtlas currently serves predictions using Logistic Regression V2.
 
-- Approximately 500 stocks
-- Approximately 1.24 million training observations
-- 14 engineered features
+The production model was selected for its simplicity, interpretability, and stable deployment pipeline.
+
+### Best Research Model
+
+| Model | ROC-AUC | PR-AUC |
+|---|---:|---:|
+| Random Forest V3 | **0.6349** | **0.2180** |
+
+Performance improvement versus production:
+
+- ROC-AUC: +0.0219
+- PR-AUC: +0.0152
+
+Dataset:
+
+- Approximately 500 S&P 500 stocks
+- Approximately 1.83 million observations
+- Historical coverage from 2010–2026
 - 10-trading-day prediction horizon
 
-The model generates a probability-based downside-risk score for each stock and ranks securities relative to the rest of the tracked universe.
+### Model Benchmarking
+
+| Model | ROC-AUC | PR-AUC |
+|---|---:|---:|
+| Logistic Regression V2 | 0.6130 | 0.2028 |
+| Logistic Regression V3 | 0.5864 | 0.1907 |
+| Random Forest V3 | **0.6349** | **0.2180** |
+| XGBoost V3 | 0.6260 | 0.1947 |
+| LightGBM V3 | 0.6169 | 0.1891 |
+
+Random Forest V3 currently represents the strongest out-of-sample performance achieved within the RiskAtlas framework.
+
+---
+
+## Key Findings
+
+The biggest lesson from RiskAtlas V3 was that market context matters.
+
+The strongest predictors of downside risk were not stock-specific indicators.
+
+The most important features included:
+
+- SPY 60-day volatility
+- Percentage of stocks above MA200
+- Stock 60-day volatility
+- SPY 60-day returns
+- SPY 20-day volatility
+- Percentage of stocks above MA50
+
+These findings suggest that market regime and market participation are more predictive of future downside-risk events than many traditional stock-level indicators.
+
+This insight motivated the transition from stock-centric modeling in V2 to the context-aware architecture used in V3.
 
 ---
 
@@ -91,21 +175,21 @@ Most stock dashboards are descriptive.
 
 They tell you what already happened.
 
-I wanted to build something that behaves more like a risk intelligence system:
+I wanted to build something that behaves more like a risk intelligence system.
 
-- Ingest market data
-- Engineer predictive features
-- Identify elevated downside-risk conditions
-- Rank stocks relative to the broader market
-- Explain why a stock is being flagged
+Instead of simply reporting what happened yesterday, RiskAtlas attempts to identify stocks exhibiting characteristics historically associated with elevated future downside risk.
 
-RiskAtlas started as a machine-learning project but has evolved into a full-stack analytics platform combining data engineering, predictive modeling, explainability, and AI-assisted interpretation.
+The goal is not to predict exact returns.
+
+The goal is to identify unusually risky conditions, rank stocks relative to the broader market, and surface signals that may warrant further investigation.
+
+RiskAtlas started as a machine-learning experiment but evolved into a full-stack analytics platform combining data engineering, predictive modeling, explainability, and AI-assisted interpretation.
 
 ---
 
 ## Business Problem
 
-Most stock dashboards are descriptive.
+Most stock dashboards focus on historical performance.
 
 They show:
 
@@ -113,16 +197,17 @@ They show:
 - Volatility
 - Moving averages
 - Technical indicators
+- Price charts
 
-But they do not answer:
+While useful, these metrics are primarily descriptive.
 
-> Which stocks currently appear most vulnerable?
+They help explain what has already happened but provide little insight into which stocks may currently be exhibiting elevated downside-risk conditions.
 
-RiskAtlas approaches this as a predictive modeling problem.
+RiskAtlas approaches this challenge as a predictive modeling problem.
 
-Historical market behavior is transformed into engineered features and used to estimate whether a stock is currently exhibiting conditions associated with elevated future downside risk.
+Historical market behavior is transformed into engineered features and used to estimate whether a stock is currently exhibiting characteristics associated with future downside-risk events.
 
-Potential use cases include:
+The platform is designed to support:
 
 - Portfolio monitoring
 - Equity risk screening
@@ -130,18 +215,16 @@ Potential use cases include:
 - Market surveillance
 - Early identification of deteriorating conditions
 
-This project is intended for educational and analytical purposes only and should not be considered investment advice.
-
 ---
 
 ## System Architecture
 
 ```text
-S&P 500 Constituents
+S&P 500 Universe
         ↓
 Historical Market Data
         ↓
-Raw PostgreSQL Tables
+PostgreSQL Database
         ↓
 SQL Cleaning & Transformation
         ↓
@@ -155,7 +238,7 @@ Risk Probabilities
         ↓
 Prediction Storage
         ↓
-Application Layer
+Streamlit Dashboard
         ↓
 AI Explanations
 ```
@@ -166,84 +249,262 @@ AI Explanations
 
 ### 1. Data Ingestion
 
-Python retrieves:
+RiskAtlas begins by collecting:
 
 - Current S&P 500 constituents
-- Historical stock-price data
+- Historical market data
+- Daily price history
+- Volume data
 
-Market data is loaded into PostgreSQL for downstream processing.
+Python ingestion pipelines retrieve and load the data into PostgreSQL for downstream processing.
 
 ---
 
-### 2. Feature Engineering
+### 2. SQL Transformation Layer
 
-Raw prices are transformed into predictive market indicators including:
+Raw market data is transformed through a series of SQL pipelines.
 
-- Daily returns
-- 5-day momentum
-- 20-day momentum
-- 60-day momentum
-- Rolling volatility
+The transformation layer is responsible for:
+
+- Data cleaning
+- Missing-value handling
+- Standardization
+- Rolling calculations
+- Dataset preparation
+
+This creates a consistent analytical foundation for feature engineering and modeling.
+
+---
+
+### 3. Feature Engineering
+
+Raw prices are transformed into predictive signals.
+
+Core features include:
+
+- Momentum
+- Volatility
 - Downside volatility
-- Moving-average relationships
 - Drawdowns
-- Negative-return frequency
-- Worst trailing return
+- Distance from highs
+- Moving-average relationships
+
+RiskAtlas V3 expands the feature framework by introducing market context.
+
+Additional feature groups include:
+
+- Market regime indicators
+- Market breadth metrics
+- Sector-relative performance
+- Market sensitivity measures
+- Cross-sectional rankings
 
 ---
 
-### 3. Label Generation
+### 4. Label Generation
 
 Future returns are evaluated over a 10-trading-day horizon.
 
-A binary downside-risk label is generated and used as the machine-learning target.
+A downside-risk event is defined and converted into a binary classification target.
+
+This target becomes the supervised learning label used during model training.
 
 ---
 
-### 4. Model Training
+### 5. Model Training
 
-Current models:
+RiskAtlas currently benchmarks multiple machine-learning models:
 
 - Logistic Regression
 - Random Forest
+- XGBoost
+- LightGBM
 
-Training uses chronological train, validation, and test splits to reduce data leakage.
+All models use chronological train, validation, and test splits to better simulate real-world deployment and reduce look-ahead bias.
 
 ---
 
-### 5. Prediction Generation
+### 6. Prediction Generation
 
-The production model generates:
+The production pipeline generates:
 
 - Risk probabilities
-- Binary classifications
+- Risk classifications
 - Risk percentiles
-- Risk-level classifications
+- Relative rankings
 
-Predictions are written back into PostgreSQL for application consumption.
+Predictions are written back into PostgreSQL where they become available to the application layer.
+
+---
+
+### 7. Application Layer
+
+The Streamlit dashboard serves as the primary interface for interacting with model outputs.
+
+Users can:
+
+- Explore current risk conditions
+- View high-risk securities
+- Search individual stocks
+- Inspect model results
+- Review risk distributions
+
+Future versions will incorporate historical tracking and AI-powered explanations.
+
+---
+
+## Context-Aware Modeling (V3)
+
+The biggest lesson from RiskAtlas V2 was that the model already understood what a stock was doing.
+
+The next challenge was teaching the model context.
+
+For example:
+
+```text
+NVDA is down 5%
+```
+
+By itself, that information is incomplete.
+
+The model should also understand:
+
+```text
+SPY is down 10%
+Semiconductors are down 15%
+Most stocks are trading below trend
+```
+
+A stock falling less than its peers may actually be demonstrating relative strength.
+
+Likewise, a stock falling alongside a broad market selloff may not be exhibiting unusual risk at all.
+
+RiskAtlas V3 was built around this idea.
+
+The goal was to move from:
+
+```text
+What is this stock doing?
+```
+
+to:
+
+```text
+What is this stock doing relative to:
+
+- The market
+- Its sector
+- The broader stock universe
+```
+
+### V3 Feature Groups
+
+#### Stock-Level Features
+
+- 20-day return
+- 60-day return
+- 20-day volatility
+- 60-day volatility
+- Downside volatility
+- Drawdowns
+- Distance from highs
+- Moving-average relationships
+
+#### Market Regime Features
+
+- SPY 20-day return
+- SPY 60-day return
+- SPY 20-day volatility
+- SPY 60-day volatility
+- SPY drawdowns
+
+#### Market Breadth Features
+
+- Percentage of stocks above MA50
+- Percentage of stocks above MA200
+- Positive-return breadth
+
+#### Sector Context Features
+
+- Return relative to sector
+- Volatility relative to sector
+
+#### Market Sensitivity Features
+
+- Rolling beta
+- Rolling market correlation
+
+#### Cross-Sectional Ranking Features
+
+- Return percentiles
+- Volatility percentiles
+- Drawdown percentiles
+- Sector-relative percentiles
+
+### Dataset
+
+- Approximately 1.83 million observations
+- Approximately 500 S&P 500 stocks
+- Historical coverage from 2010–2026
+- Chronological train / validation / test framework
+
+### Model Benchmarking
+
+| Model | ROC-AUC | PR-AUC |
+|---|---:|---:|
+| Logistic Regression V3 | 0.5864 | 0.1907 |
+| Random Forest V3 | **0.6349** | **0.2180** |
+| XGBoost V3 | 0.6260 | 0.1947 |
+| LightGBM V3 | 0.6169 | 0.1891 |
+
+### Outcome
+
+RiskAtlas V3 established a new performance benchmark within the project.
+
+```text
+Production Logistic Regression V2
+
+ROC-AUC: 0.6130
+PR-AUC : 0.2028
+
+Context-Aware Random Forest V3
+
+ROC-AUC: 0.6349
+PR-AUC : 0.2180
+```
+
+Performance Improvements:
+
+```text
+ROC-AUC: +0.0219
+PR-AUC : +0.0152
+```
+
+The results validate the importance of context-aware feature engineering and demonstrate that broader market conditions materially improve downside-risk prediction.
 
 ---
 
 ## Streamlit Application
 
-The current dashboard prototype is being rebuilt into a stable, modular application with four planned workflows.
+The current dashboard serves as the primary interface for interacting with RiskAtlas predictions.
+
+The application is designed around four primary workflows.
 
 ### Overview
 
 Provides a market-wide summary including:
 
 - Stocks tracked
-- Critical-risk stocks
-- High-risk stocks
 - Risk-score distribution
 - Highest-risk stocks
 - Model status
+- Current market risk landscape
 
 ### Stock Lookup
 
 Allows users to inspect individual securities.
 
-Planned information includes:
+Current and planned information includes:
 
 - Risk score
 - Risk percentile
@@ -254,34 +515,35 @@ Planned information includes:
 
 ### Top Risk Stocks
 
-Ranks securities by current modeled risk.
+Ranks securities by current modeled downside risk.
 
 Planned functionality includes:
 
-- Filtering by risk level
-- Comparing risk scores
-- Identifying high-priority names for further analysis
+- Risk-level filtering
+- Relative risk comparisons
+- Identification of high-priority names for further research
 
 ### Model Insights
 
 Explains:
 
 - Model performance
-- Feature set
+- Feature framework
 - Methodology
-- Prediction framework
+- Prediction workflow
+- Model evolution
 
 ---
 
 ## AI Explanation Layer
 
-A planned LLM-powered explanation layer will translate structured model evidence into readable risk summaries.
+A future LLM-powered explanation layer will translate structured model evidence into readable risk summaries.
 
-The machine-learning model will remain responsible for generating predictions.
+The machine-learning model remains responsible for generating predictions.
 
-The AI layer will be responsible for interpretation.
+The AI layer focuses on interpretation.
 
-Rather than showing only a score, the system will explain:
+Rather than showing only a score, RiskAtlas will explain:
 
 - Why a stock is considered risky
 - Which signals contributed most
@@ -299,12 +561,12 @@ Risk Score: 72.4
 AI Summary:
 
 NVDA currently exhibits elevated modeled downside risk.
-The signal is associated with increased volatility,
-weakening medium-term momentum, and a larger-than-normal
-drawdown relative to recent highs.
 
-Its current score ranks above 88.7% of stocks tracked by
-RiskAtlas.
+The signal is associated with increased volatility,
+weakening medium-term momentum,
+and a larger-than-normal drawdown relative to recent highs.
+
+Its current score ranks above 88.7% of stocks tracked by RiskAtlas.
 ```
 
 The AI does not make the prediction.
@@ -315,117 +577,29 @@ The AI layer explains the evidence.
 
 ---
 
-## RiskAtlas V3
-
-The biggest lesson from V2 was that the model already understands what a stock is doing.
-
-The next challenge is teaching the model context.
-
-Today, if NVDA falls 5%, the model sees:
-
-```text
-NVDA is down 5%
-```
-
-But it does not know:
-
-```text
-SPY is down 10%
-Semiconductors are down 15%
-```
-
-In reality, context matters.
-
-A stock falling less than its peers may actually be demonstrating strength.
-
-### V3 Goal
-
-Move the model from:
-
-```text
-What is this stock doing?
-```
-
-to:
-
-```text
-What is this stock doing relative to
-the market,
-its sector,
-and the rest of the stock universe?
-```
-
-### Planned V3 Features
-
-#### Relative Strength
-
-- Return relative to SPY
-- Volatility relative to SPY
-- Drawdown relative to SPY
-
-#### Cross-Sectional Rankings
-
-- Momentum percentile
-- Volatility percentile
-- Drawdown percentile
-- Risk percentile
-
-#### Sector Context
-
-- Return relative to sector
-- Volatility relative to sector
-- Sector-relative rankings
-
-#### Market Breadth
-
-- Percentage of stocks above MA50
-- Percentage of stocks above MA200
-- Positive-return breadth
-- Market participation measures
-
-#### Market Regimes
-
-- Bull market
-- Neutral market
-- Bear market
-- High-volatility market
-
-#### Beta and Market Sensitivity
-
-- Rolling beta
-- Rolling correlation
-- Down-market beta
-
-#### Volatility Regimes
-
-- Short-term versus long-term volatility
-- Volatility acceleration
-- Volatility breakouts
-
-#### Persistence Features
-
-- Days below MA50
-- Days below MA200
-- Days since recent highs
-- Duration of drawdowns
-
----
-
 ## Future Modeling
 
-Once V3 features are complete, RiskAtlas will benchmark:
+The primary lesson from V3 was that feature engineering generated larger gains than model complexity.
 
-- Logistic Regression
-- Random Forest
-- XGBoost
-- LightGBM
-- CatBoost
+Adding market-regime awareness, breadth indicators, sector-relative performance metrics, and market-sensitivity features produced meaningful improvements across multiple model families.
 
-The project philosophy is:
+Future research directions include:
 
-> Better features before more complex models.
+- VIX integration
+- Treasury-yield features
+- Credit-spread indicators
+- Earnings-event proximity
+- Probability calibration
+- Regime-specific models
+- Alternative labeling frameworks
+- Explainability systems
+- Automated model monitoring
 
-A new model will only replace the current production model if it demonstrates superior out-of-sample performance.
+RiskAtlas will continue benchmarking new models, but a model will only replace the current leader if it demonstrates superior out-of-sample performance on a fully held-out test set.
+
+Project philosophy:
+
+> Better information beats more complexity.
 
 ---
 
@@ -441,13 +615,15 @@ A new model will only replace the current production model if it demonstrates su
 
 - PostgreSQL
 - SQL
-- SQL window functions
+- SQL Window Functions
 
 ### Machine Learning
 
 - scikit-learn
 - Logistic Regression
 - Random Forest
+- XGBoost
+- LightGBM
 
 ### Visualization
 
@@ -457,8 +633,8 @@ A new model will only replace the current production model if it demonstrates su
 ### AI
 
 - OpenAI API *(planned)*
-- Structured LLM outputs *(planned)*
-- Model-aware explanations *(planned)*
+- Structured LLM Outputs *(planned)*
+- Model-Aware Explanations *(planned)*
 
 ### Development
 
@@ -469,8 +645,6 @@ A new model will only replace the current production model if it demonstrates su
 
 ## Project Structure
 
-The application is currently being reorganized toward the following modular structure:
-
 ```text
 RiskAtlas/
 │
@@ -478,47 +652,57 @@ RiskAtlas/
 ├── .gitignore
 ├── requirements.txt
 ├── run_pipeline.py
+├── test_database.py
 │
 ├── data/
-│   ├── output/
-│   └── processed/
 │
 ├── models/
 │   ├── logistic_risk_model.joblib
 │   ├── logistic_risk_model_v2.joblib
 │   ├── random_forest_risk_model.joblib
-│   └── random_forest_risk_model_v2.joblib
+│   ├── random_forest_risk_model_v2.joblib
+│   ├── best_random_forest_v3.joblib
+│   ├── best_risk_model_v3.joblib
+│   ├── v3_benchmark_results.csv
+│   └── v3_rf_tuning_results.csv
+│
+├── sql/
+│   │
+│   ├── schema/
+│   ├── staging/
+│   ├── marts/
+│   ├── analytics/
+│   │
+│   ├── features/
+│   │   ├── price_features.sql
+│   │   ├── model_dataset.sql
+│   │   ├── label_generation.sql
+│   │   └── feature_engineering_v3.sql
+│   │
+│   └── models/
 │
 ├── src/
 │   │
 │   ├── ai/
-│   │   └── ai_explanations.py
 │   │
 │   ├── app/
-│   │   ├── app.py
-│   │   ├── data_access.py
-│   │   ├── components.py
-│   │   │
-│   │   └── pages/
-│   │       ├── overview.py
-│   │       ├── stock_lookup.py
-│   │       ├── top_risk.py
-│   │       └── model_insights.py
 │   │
 │   ├── data/
-│   │   └── stock_load.py
+│   │   ├── stock_load.py
+│   │   └── context_load.py
 │   │
 │   ├── models/
 │   │   ├── prediction.py
 │   │   ├── model_training_logistic.py
 │   │   ├── model_training_logistic_v2.py
 │   │   ├── model_training_rf.py
-│   │   └── model_training_rf_v2.py
+│   │   ├── model_training_rf_v2.py
+│   │   ├── model_training_v3.py
+│   │   └── random_forest_tuning_v3.py
 │   │
 │   └── __init__.py
 │
-└── tests/
-    └── test_database.py
+└── .vscode/
 ```
 
 ---
@@ -551,10 +735,41 @@ pip install -r requirements.txt
 export DATABASE_URL="postgresql://username:password@localhost:5432/risk_atlas"
 ```
 
-### Run Pipeline
+### Build Feature Tables
+
+Run the SQL feature engineering pipeline:
+
+```sql
+sql/features/price_features.sql
+sql/features/model_dataset.sql
+sql/features/label_generation.sql
+sql/features/feature_engineering_v3.sql
+```
+
+### Train Models
+
+Production Logistic Regression:
 
 ```bash
-python run_pipeline.py
+python src/models/model_training_logistic_v2.py
+```
+
+V3 Benchmarking:
+
+```bash
+python src/models/model_training_v3.py
+```
+
+V3 Random Forest Tuning:
+
+```bash
+python src/models/random_forest_tuning_v3.py
+```
+
+### Generate Predictions
+
+```bash
+python src/models/prediction.py
 ```
 
 ### Launch Dashboard
@@ -569,43 +784,64 @@ streamlit run src/app/app.py
 
 ### Application
 
-- Historical risk tracking
+- Historical risk-score tracking
 - Watchlists
+- Saved stock monitoring
 - Advanced filtering
 - Export functionality
+- Historical prediction review
 
 ### Explainability
 
 - Feature-level risk drivers
-- Logistic-regression contribution analysis
-- Model-aware AI explanations
+- Model contribution analysis
+- Risk-driver decomposition
+- AI-generated risk summaries
+- Natural-language explanations
 
 ### Modeling
 
-- RiskAtlas V3 contextual features
-- Tree-based model benchmarking
+- VIX integration
+- Treasury-yield features
+- Credit-spread indicators
+- Earnings-event proximity
 - Probability calibration
+- Regime-specific models
+- Alternative labeling frameworks
+- Ensemble modeling
 - Model monitoring
 
 ### Infrastructure
 
 - Automated data ingestion
+- Automated feature generation
 - Daily prediction generation
 - Cloud deployment
 - Monitoring and alerting
+- Scheduled retraining pipeline
 
 ---
 
-## Notes
+## What I Learned
 
-RiskAtlas is designed as a market intelligence and analytics platform, not a trading system.
+The biggest lesson from this project was that better features often matter more than more sophisticated models.
 
-The model attempts to identify stocks exhibiting conditions historically associated with elevated downside risk, but markets are noisy, adaptive, and often unpredictable.
+My initial instinct was to improve performance by trying increasingly complex machine-learning algorithms.
 
-A high RiskAtlas score does not mean a stock will fall.
+However, the largest gains came from improving the information available to the model.
 
-Likewise, a low score does not guarantee positive future performance.
+Moving from stock-centric features to context-aware features produced a larger improvement than switching model families.
 
-The purpose of the platform is to surface potentially interesting risk signals, provide context around those signals, and support deeper research.
+The V3 experiments showed that market regime, market breadth, and relative positioning contain meaningful predictive information that traditional stock-level indicators often miss.
 
-Think of RiskAtlas as a starting point for investigation rather than a source of investment recommendations.
+This project reinforced the importance of:
+
+- Feature engineering
+- Proper train / validation / test methodology
+- Out-of-sample evaluation
+- Context-aware modeling
+- Building complete end-to-end systems rather than isolated models
+
+RiskAtlas ultimately became much more than a machine-learning experiment.
+
+It evolved into a full-stack data science project combining data engineering, analytics, machine learning, application development, and AI-assisted interpretation into a single workflow.
