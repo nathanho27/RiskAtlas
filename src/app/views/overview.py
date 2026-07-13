@@ -18,13 +18,30 @@ def render_overview(df: pd.DataFrame) -> None:
         .sum()
     )
 
-    average_risk_score = (
-        df["risk_score"].mean() * 100
+    positive_alerts = (
+        df["risk_pred"]
+        .eq(1)
+        .sum()
     )
 
     prediction_date = df["date"].max()
 
+    model_name = (
+        df["model_name"].dropna().iloc[0]
+        if "model_name" in df.columns and not df["model_name"].dropna().empty
+        else "Random Forest V3 Tuned"
+    )
+
     st.subheader("Market Overview")
+
+    st.info(
+        f"{positive_alerts} stocks currently exceed the "
+        "production downside-risk threshold."
+    )
+
+    st.caption(
+        f"Production model: {model_name}"
+    )
 
     col1, col2, col3, col4 = st.columns(
         4,
@@ -51,8 +68,8 @@ def render_overview(df: pd.DataFrame) -> None:
 
     with col4:
         st.metric(
-            "Average Risk Score",
-            f"{average_risk_score:.1f}",
+            "Positive Alerts",
+            f"{positive_alerts:,}",
         )
 
     st.caption(
@@ -241,6 +258,7 @@ def render_overview(df: pd.DataFrame) -> None:
                 "adj_close",
                 "risk_score",
                 "risk_percentile",
+                "risk_pred",
                 "risk_level",
             ]
         ]
@@ -269,12 +287,23 @@ def render_overview(df: pd.DataFrame) -> None:
         )
     )
 
+    top_risk["risk_pred"] = (
+        top_risk["risk_pred"]
+        .map(
+            {
+                1: "Triggered",
+                0: "Below Threshold",
+            }
+        )
+    )
+
     top_risk = top_risk.rename(
         columns={
             "ticker": "Ticker",
             "adj_close": "Price",
             "risk_score": "Risk Score",
             "risk_percentile": "Percentile",
+            "risk_pred": "Alert Status",
             "risk_level": "Risk Level",
         }
     )

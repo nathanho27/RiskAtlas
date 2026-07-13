@@ -28,6 +28,14 @@ def get_risk_explanation(risk_level: str) -> str:
     )
 
 
+def get_alert_status(risk_pred: int) -> str:
+    return (
+        "Triggered"
+        if risk_pred == 1
+        else "Below Threshold"
+    )
+
+
 def render_stock_lookup(df: pd.DataFrame) -> None:
     ticker_options = sorted(
         df["ticker"]
@@ -65,21 +73,26 @@ def render_stock_lookup(df: pd.DataFrame) -> None:
 
     stock = stock_rows.iloc[0]
 
-    col1, col2, col3, col4 = st.columns(
-        4,
+    risk_score = stock["risk_score"] * 100
+    risk_percentile = stock["risk_percentile"] * 100
+    risk_pred = int(stock["risk_pred"])
+    alert_status = get_alert_status(risk_pred)
+
+    col1, col2, col3, col4, col5 = st.columns(
+        5,
         gap="medium",
     )
 
     with col1:
         st.metric(
             "Risk Score",
-            f"{stock['risk_score'] * 100:.1f}",
+            f"{risk_score:.1f}",
         )
 
     with col2:
         st.metric(
             "Risk Percentile",
-            f"{stock['risk_percentile'] * 100:.1f}%",
+            f"{risk_percentile:.1f}%",
         )
 
     with col3:
@@ -89,6 +102,12 @@ def render_stock_lookup(df: pd.DataFrame) -> None:
         )
 
     with col4:
+        st.metric(
+            "Alert Status",
+            alert_status,
+        )
+
+    with col5:
         st.metric(
             "Latest Price",
             f"${stock['adj_close']:,.2f}",
@@ -100,17 +119,29 @@ def render_stock_lookup(df: pd.DataFrame) -> None:
         stock["risk_level"]
     )
 
+    alert_explanation = (
+        "The model's estimated downside-risk probability "
+        "exceeds the production alert threshold."
+        if risk_pred == 1
+        else (
+            "The stock is ranked relative to the current market, "
+            "but its estimated downside-risk probability remains "
+            "below the production alert threshold."
+        )
+    )
+
     st.info(
         f"{selected_ticker} is currently classified as "
         f"{stock['risk_level']} Risk with a risk score of "
-        f"{stock['risk_score'] * 100:.1f}.\n\n"
+        f"{risk_score:.1f}.\n\n"
         f"{explanation}\n\n"
-        f"Its score ranks above "
-        f"{stock['risk_percentile'] * 100:.1f}% "
-        "of stocks tracked by RiskAtlas."
+        f"It ranks in the {risk_percentile:.1f}th percentile "
+        "of stocks tracked by RiskAtlas.\n\n"
+        f"{alert_explanation}"
     )
 
     st.caption(
-        "This is a relative risk signal, not a prediction "
-        "that the stock will decline with certainty."
+        "RiskAtlas estimates relative downside risk over the next "
+        "10 trading days. This signal does not guarantee that the "
+        "stock will decline."
     )

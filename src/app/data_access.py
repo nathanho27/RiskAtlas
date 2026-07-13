@@ -28,7 +28,7 @@ def load_predictions() -> pd.DataFrame:
             model_name,
             generated_at,
             risk_percentile
-        FROM current_risk_predictions
+        FROM current_risk_predictions_v3
         ORDER BY
             risk_score DESC,
             ticker ASC;
