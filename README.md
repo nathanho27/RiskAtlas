@@ -1,5 +1,17 @@
 # RiskAtlas
 
+Current Production Model:
+Random Forest V3
+
+Universe:
+500 U.S. Equities
+
+Prediction Horizon:
+10 Trading Days
+
+Latest Test Performance:
+ROC-AUC 0.6349 | PR-AUC 0.2180
+
 ## Context-Aware Stock Risk Intelligence Platform
 
 RiskAtlas is an end-to-end market risk intelligence system designed to identify stocks exhibiting elevated downside-risk conditions.
@@ -92,10 +104,10 @@ Potential use cases include:
 - XGBoost benchmarking
 - LightGBM benchmarking
 - Random Forest hyperparameter tuning
+- Stable modular Streamlit application
 
 ### In Development
 
-- Stable modular Streamlit application
 - Historical risk-score tracking
 - Model-derived risk drivers
 - AI-generated explanations
@@ -110,22 +122,11 @@ Potential use cases include:
 
 | Model | ROC-AUC | PR-AUC |
 |---|---:|---:|
-| Logistic Regression V2 | 0.6130 | 0.2028 |
-
-RiskAtlas currently serves predictions using Logistic Regression V2.
-
-The production model was selected for its simplicity, interpretability, and stable deployment pipeline.
-
-### Best Research Model
-
-| Model | ROC-AUC | PR-AUC |
-|---|---:|---:|
 | Random Forest V3 | **0.6349** | **0.2180** |
 
-Performance improvement versus production:
+RiskAtlas currently serves predictions using Random Forest V3.
 
-- ROC-AUC: +0.0219
-- PR-AUC: +0.0152
+The model was selected after outperforming all benchmarked alternatives on a fully held-out test set while maintaining stable live behavior across the production universe.
 
 Dataset:
 
@@ -234,9 +235,9 @@ Downside-Risk Labels
         ↓
 Machine Learning Models
         ↓
-Risk Probabilities
+Random Forest V3
         ↓
-Prediction Storage
+current_risk_predictions_v3
         ↓
 Streamlit Dashboard
         ↓
@@ -486,9 +487,13 @@ The results validate the importance of context-aware feature engineering and dem
 
 ## Streamlit Application
 
-The current dashboard serves as the primary interface for interacting with RiskAtlas predictions.
+The dashboard currently tracks 500 stocks and surfaces:
 
-The application is designed around four primary workflows.
+- Risk scores
+- Risk percentiles
+- Risk classifications
+- Binary risk alerts
+- Current market-wide risk conditions
 
 ### Overview
 
@@ -533,6 +538,7 @@ Explains:
 - Prediction workflow
 - Model evolution
 
+
 ---
 
 ## AI Explanation Layer
@@ -566,7 +572,7 @@ The signal is associated with increased volatility,
 weakening medium-term momentum,
 and a larger-than-normal drawdown relative to recent highs.
 
-Its current score ranks above 88.7% of stocks tracked by RiskAtlas.
+Its current score ranks in the 88.7th percentile of stocks tracked by RiskAtlas.
 ```
 
 The AI does not make the prediction.
@@ -645,7 +651,6 @@ Project philosophy:
 
 ## Project Structure
 
-```text
 RiskAtlas/
 │
 ├── README.md
@@ -677,7 +682,8 @@ RiskAtlas/
 │   │   ├── price_features.sql
 │   │   ├── model_dataset.sql
 │   │   ├── label_generation.sql
-│   │   └── feature_engineering_v3.sql
+│   │   ├── feature_engineering_v3.sql
+│   │   └── inference_engineering_v3.sql
 │   │
 │   └── models/
 │
@@ -686,6 +692,12 @@ RiskAtlas/
 │   ├── ai/
 │   │
 │   ├── app/
+│   │   ├── app.py
+│   │   ├── data_access.py
+│   │   └── views/
+│   │       ├── overview.py
+│   │       ├── stock_lookup.py
+│   │       └── model_insights.py
 │   │
 │   ├── data/
 │   │   ├── stock_load.py
@@ -693,6 +705,7 @@ RiskAtlas/
 │   │
 │   ├── models/
 │   │   ├── prediction.py
+│   │   ├── prediction_v3.py
 │   │   ├── model_training_logistic.py
 │   │   ├── model_training_logistic_v2.py
 │   │   ├── model_training_rf.py
@@ -703,7 +716,6 @@ RiskAtlas/
 │   └── __init__.py
 │
 └── .vscode/
-```
 
 ---
 
@@ -744,6 +756,7 @@ sql/features/price_features.sql
 sql/features/model_dataset.sql
 sql/features/label_generation.sql
 sql/features/feature_engineering_v3.sql
+sql/features/inference_engineering_v3.sql
 ```
 
 ### Train Models
@@ -769,7 +782,7 @@ python src/models/random_forest_tuning_v3.py
 ### Generate Predictions
 
 ```bash
-python src/models/prediction.py
+python src/models/prediction_v3.py
 ```
 
 ### Launch Dashboard
