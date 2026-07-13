@@ -143,5 +143,156 @@ def load_predictions() -> pd.DataFrame:
     return predictions
 
 
+@st.cache_data(
+    ttl=300,
+    show_spinner=False,
+)
+def load_risk_history(
+    ticker: str,
+    days: int = 90,
+) -> pd.DataFrame:
+    database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
+        raise RuntimeError(
+            "DATABASE_URL is not set."
+        )
+
+    normalized_ticker = str(ticker).strip().upper()
+
+    if not normalized_ticker:
+        return pd.DataFrame()
+
+    query = """
+        SELECT
+            date,
+            ticker,
+            adj_close,
+            risk_score,
+            risk_percentile,
+            risk_pred,
+            risk_level,
+            model_name,
+            generated_at
+        FROM risk_prediction_history_v3
+        WHERE ticker = %s
+          AND date >= CURRENT_DATE - %s
+        ORDER BY
+            date ASC,
+            generated_at ASC;
+    """
+
+    connection = None
+
+    try:
+        connection = psycopg2.connect(
+            database_url,
+            connect_timeout=10,
+        )
+
+        history = pd.read_sql_query(
+            query,
+            connection,
+            params=(
+                normalized_ticker,
+                int(days),
+            ),
+        )
+
+    finally:
+        if connection is not None:
+            connection.close()
+
+    if history.empty:
+        return history
+
+    history["ticker"] = (
+        history["ticker"]
+        .map(
+            lambda value: str(value).strip().upper()
+        )
+        .astype(object)
+    )
+
+    history["risk_level"] = (
+        history["risk_level"]
+        .map(
+            lambda value: str(value).strip().title()
+        )
+        .astype(object)
+    )
+
+    history["model_name"] = (
+        history["model_name"]
+        .map(
+            lambda value: str(value).strip()
+        )
+        .astype(object)
+    )
+
+    history["date"] = pd.to_datetime(
+        history["date"],
+        errors="coerce",
+    )
+
+    history["generated_at"] = pd.to_datetime(
+        history["generated_at"],
+        errors="coerce",
+    )
+
+    numeric_columns = [
+        "adj_close",
+        "risk_score",
+        "risk_percentile",
+        "risk_pred",
+    ]
+
+    for column in numeric_columns:
+        history[column] = (
+            pd.to_numeric(
+                history[column],
+                errors="coerce",
+            )
+            .astype("float64")
+        )
+
+    history = history.dropna(
+        subset=[
+            "date",
+            "ticker",
+            "adj_close",
+            "risk_score",
+            "risk_percentile",
+            "risk_level",
+        ]
+    )
+
+    history = (
+        history
+        .sort_values(
+            by=[
+                "date",
+                "generated_at",
+            ],
+            ascending=[
+                True,
+                True,
+            ],
+        )
+        .drop_duplicates(
+            subset=[
+                "date",
+                "ticker",
+                "model_name",
+            ],
+            keep="last",
+        )
+        .reset_index(drop=True)
+    )
+
+    return history
+
+
 def clear_prediction_cache() -> None:
     load_predictions.clear()
+    load_risk_history.clear()

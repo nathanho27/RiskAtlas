@@ -1,5 +1,8 @@
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
+
+from data_access import load_risk_history
 
 
 def get_risk_explanation(risk_level: str) -> str:
@@ -34,6 +37,135 @@ def get_alert_status(risk_pred: int) -> str:
         if risk_pred == 1
         else "Below Threshold"
     )
+
+
+def render_risk_history(
+    ticker: str,
+) -> None:
+    st.subheader("Historical Risk Percentile")
+
+    try:
+        history = load_risk_history(
+            ticker=ticker,
+            days=90,
+        )
+
+    except Exception as error:
+        st.warning(
+            "Historical risk data could not be loaded."
+        )
+        st.caption(str(error))
+        return
+
+    if history.empty:
+        st.info(
+            "No historical risk observations are available "
+            f"for {ticker} yet."
+        )
+        return
+    
+    if len(history) == 1:
+        st.info(
+        "Historical tracking has started. Additional dates "
+        "will appear automatically as new predictions are generated."
+        )
+
+        return
+
+    chart_data = history.copy()
+
+    chart_data["risk_percentile_pct"] = (
+        chart_data["risk_percentile"] * 100
+    )
+
+    figure = go.Figure()
+
+    figure.add_trace(
+        go.Scatter(
+            x=chart_data["date"],
+            y=chart_data["risk_percentile_pct"],
+            mode="lines+markers",
+            name="Risk Percentile",
+            customdata=chart_data[
+                [
+                    "risk_score",
+                    "risk_level",
+                    "adj_close",
+                ]
+            ],
+            hovertemplate=(
+                "<b>%{x|%b %d, %Y}</b><br>"
+                "Risk Percentile: %{y:.1f}%<br>"
+                "Risk Score: %{customdata[0]:.3f}<br>"
+                "Risk Level: %{customdata[1]}<br>"
+                "Price: $%{customdata[2]:,.2f}"
+                "<extra></extra>"
+            ),
+        )
+    )
+
+    figure.add_hline(
+        y=50,
+        line_dash="dot",
+        annotation_text="Moderate",
+        annotation_position="bottom right",
+    )
+
+    figure.add_hline(
+        y=80,
+        line_dash="dot",
+        annotation_text="High",
+        annotation_position="bottom right",
+    )
+
+    figure.add_hline(
+        y=95,
+        line_dash="dot",
+        annotation_text="Critical",
+        annotation_position="bottom right",
+    )
+
+    figure.update_layout(
+        xaxis_title="Prediction Date",
+        yaxis_title="Risk Percentile",
+        yaxis=dict(
+            range=[0, 100],
+            ticksuffix="%",
+        ),
+        hovermode="x unified",
+        margin=dict(
+            l=20,
+            r=20,
+            t=20,
+            b=20,
+        ),
+        height=420,
+        showlegend=False,
+    )
+
+    st.plotly_chart(
+        figure,
+        use_container_width=True,
+        key=f"risk_history_{ticker}",
+    )
+
+    observation_count = len(chart_data)
+    first_date = chart_data["date"].min()
+    latest_date = chart_data["date"].max()
+
+    if observation_count == 1:
+        st.caption(
+            "Historical tracking currently contains one observation. "
+            "The chart will build automatically as future pipeline "
+            "runs add new prediction dates."
+        )
+
+    else:
+        st.caption(
+            f"Showing {observation_count} observations from "
+            f"{first_date:%b %d, %Y} through "
+            f"{latest_date:%b %d, %Y}."
+        )
 
 
 def render_stock_lookup(df: pd.DataFrame) -> None:
@@ -112,6 +244,10 @@ def render_stock_lookup(df: pd.DataFrame) -> None:
             "Latest Price",
             f"${stock['adj_close']:,.2f}",
         )
+
+    render_risk_history(
+        ticker=selected_ticker,
+    )
 
     st.subheader("Risk Explanation")
 
