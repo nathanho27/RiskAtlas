@@ -1,34 +1,22 @@
+import sys
+from pathlib import Path
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from data_access import load_risk_history
+
+SRC_DIR = Path(__file__).resolve().parents[2]
+
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 
-def get_risk_explanation(risk_level: str) -> str:
-    explanations = {
-        "Critical": (
-            "This stock currently ranks among the highest-risk "
-            "stocks tracked by RiskAtlas."
-        ),
-        "High": (
-            "This stock currently shows elevated downside-risk "
-            "conditions relative to most tracked stocks."
-        ),
-        "Moderate": (
-            "This stock shows some elevated risk, but it is not "
-            "currently among the highest-risk stocks."
-        ),
-        "Low": (
-            "This stock currently shows relatively limited "
-            "downside-risk pressure."
-        ),
-    }
-
-    return explanations.get(
-        risk_level,
-        "Risk conditions are currently unavailable.",
-    )
+from ai.risk_drivers import generate_risk_drivers
+from data_access import (
+    load_risk_history,
+    load_stock_features,
+)
 
 
 def get_alert_status(risk_pred: int) -> str:
@@ -63,13 +51,12 @@ def render_risk_history(
             f"for {ticker} yet."
         )
         return
-    
+
     if len(history) == 1:
         st.info(
-        "Historical tracking has started. Additional dates "
-        "will appear automatically as new predictions are generated."
+            "Historical tracking has started. Additional dates "
+            "will appear automatically as new predictions are generated."
         )
-
         return
 
     chart_data = history.copy()
@@ -153,22 +140,195 @@ def render_risk_history(
     first_date = chart_data["date"].min()
     latest_date = chart_data["date"].max()
 
-    if observation_count == 1:
-        st.caption(
-            "Historical tracking currently contains one observation. "
-            "The chart will build automatically as future pipeline "
-            "runs add new prediction dates."
+    st.caption(
+        f"Showing {observation_count} observations from "
+        f"{first_date:%b %d, %Y} through "
+        f"{latest_date:%b %d, %Y}."
+    )
+
+
+def render_risk_drivers(
+    ticker: str,
+) -> list[dict]:
+    st.subheader("Key Risk Drivers")
+
+    try:
+        feature_data = load_stock_features(
+            ticker=ticker,
+        )
+
+    except Exception as error:
+        st.warning(
+            "Risk drivers could not be loaded."
+        )
+        st.caption(str(error))
+        return []
+
+    if feature_data.empty:
+        st.info(
+            "No feature data is currently available "
+            f"for {ticker}."
+        )
+        return []
+
+    try:
+        drivers = generate_risk_drivers(
+            stock_features=feature_data.iloc[0],
+            max_drivers=5,
+        )
+
+    except Exception as error:
+        st.warning(
+            "Risk drivers could not be generated."
+        )
+        st.caption(str(error))
+        return []
+
+    if not drivers:
+        st.info(
+            "No major risk drivers were identified "
+            f"for {ticker} using the current thresholds."
+        )
+        return []
+
+    for index, driver in enumerate(
+        drivers,
+        start=1,
+    ):
+        direction = driver["direction"]
+        severity = int(driver["severity"])
+
+        status_label = (
+            "Protective"
+            if direction == "protective"
+            else "Risk Increasing"
+        )
+
+        with st.container(border=True):
+            title_col, status_col = st.columns(
+                [3, 1],
+                gap="medium",
+            )
+
+            with title_col:
+                st.markdown(
+                    f"#### {index}. {driver['title']}"
+                )
+
+                st.caption(
+                    driver["category"]
+                )
+
+            with status_col:
+                st.markdown(
+                    f"**{status_label}**"
+                )
+
+                st.caption(
+                    f"Severity: {severity}/5"
+                )
+
+            st.write(
+                driver["explanation"]
+            )
+
+    st.caption(
+        "Drivers are generated from the latest stock, "
+        "market, sector, volatility and breadth features "
+        "used by the RiskAtlas V3 model."
+    )
+
+    return drivers
+
+
+def render_risk_brief(
+    ticker: str,
+    risk_level: str,
+    risk_score: float,
+    risk_percentile: float,
+    risk_pred: int,
+    drivers: list[dict],
+) -> None:
+    st.subheader("Risk Brief")
+
+    risk_drivers = [
+        driver
+        for driver in drivers
+        if driver["direction"] == "risk"
+    ]
+
+    protective_drivers = [
+        driver
+        for driver in drivers
+        if driver["direction"] == "protective"
+    ]
+
+    brief_parts = [
+        (
+            f"{ticker} is currently classified as "
+            f"{risk_level} Risk with a risk score of "
+            f"{risk_score:.1f}."
+        ),
+        (
+            f"It ranks in the {risk_percentile:.1f}th percentile "
+            "of stocks tracked by RiskAtlas."
+        ),
+    ]
+
+    if risk_drivers:
+        risk_titles = [
+            driver["title"].lower()
+            for driver in risk_drivers[:3]
+        ]
+
+        brief_parts.append(
+            "The primary risk signals are "
+            f"{', '.join(risk_titles)}."
         )
 
     else:
-        st.caption(
-            f"Showing {observation_count} observations from "
-            f"{first_date:%b %d, %Y} through "
-            f"{latest_date:%b %d, %Y}."
+        brief_parts.append(
+            "No major risk-increasing drivers exceeded "
+            "the current explanation thresholds."
         )
 
+    if protective_drivers:
+        protective_titles = [
+            driver["title"].lower()
+            for driver in protective_drivers[:2]
+        ]
 
-def render_stock_lookup(df: pd.DataFrame) -> None:
+        brief_parts.append(
+            "Offsetting factors include "
+            f"{', '.join(protective_titles)}."
+        )
+
+    if risk_pred == 1:
+        brief_parts.append(
+            "The model's estimated downside-risk probability "
+            "exceeds the production alert threshold."
+        )
+
+    else:
+        brief_parts.append(
+            "The model's estimated downside-risk probability "
+            "remains below the production alert threshold."
+        )
+
+    st.info(
+        "\n\n".join(brief_parts)
+    )
+
+    st.caption(
+        "RiskAtlas estimates relative downside risk over the next "
+        "10 trading days. This signal does not guarantee that the "
+        "stock will decline."
+    )
+
+
+def render_stock_lookup(
+    df: pd.DataFrame,
+) -> None:
     ticker_options = sorted(
         df["ticker"]
         .dropna()
@@ -245,39 +405,19 @@ def render_stock_lookup(df: pd.DataFrame) -> None:
             f"${stock['adj_close']:,.2f}",
         )
 
+    drivers = render_risk_drivers(
+        ticker=selected_ticker,
+    )
+
     render_risk_history(
         ticker=selected_ticker,
     )
 
-    st.subheader("Risk Explanation")
-
-    explanation = get_risk_explanation(
-        stock["risk_level"]
-    )
-
-    alert_explanation = (
-        "The model's estimated downside-risk probability "
-        "exceeds the production alert threshold."
-        if risk_pred == 1
-        else (
-            "The stock is ranked relative to the current market, "
-            "but its estimated downside-risk probability remains "
-            "below the production alert threshold."
-        )
-    )
-
-    st.info(
-        f"{selected_ticker} is currently classified as "
-        f"{stock['risk_level']} Risk with a risk score of "
-        f"{risk_score:.1f}.\n\n"
-        f"{explanation}\n\n"
-        f"It ranks in the {risk_percentile:.1f}th percentile "
-        "of stocks tracked by RiskAtlas.\n\n"
-        f"{alert_explanation}"
-    )
-
-    st.caption(
-        "RiskAtlas estimates relative downside risk over the next "
-        "10 trading days. This signal does not guarantee that the "
-        "stock will decline."
+    render_risk_brief(
+        ticker=selected_ticker,
+        risk_level=stock["risk_level"],
+        risk_score=risk_score,
+        risk_percentile=risk_percentile,
+        risk_pred=risk_pred,
+        drivers=drivers,
     )

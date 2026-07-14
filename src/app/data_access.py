@@ -1,8 +1,22 @@
-import os
-
 import pandas as pd
 import psycopg2
 import streamlit as st
+
+
+DB_NAME = "risk_atlas"
+DB_USER = "nathanho"
+DB_HOST = "localhost"
+DB_PORT = "5432"
+
+
+def get_database_connection():
+    return psycopg2.connect(
+        dbname=DB_NAME,
+        user=DB_USER,
+        host=DB_HOST,
+        port=DB_PORT,
+        connect_timeout=10,
+    )
 
 
 @st.cache_data(
@@ -10,13 +24,6 @@ import streamlit as st
     show_spinner=False,
 )
 def load_predictions() -> pd.DataFrame:
-    database_url = os.getenv("DATABASE_URL")
-
-    if not database_url:
-        raise RuntimeError(
-            "DATABASE_URL is not set."
-        )
-
     query = """
         SELECT
             date,
@@ -37,10 +44,7 @@ def load_predictions() -> pd.DataFrame:
     connection = None
 
     try:
-        connection = psycopg2.connect(
-            database_url,
-            connect_timeout=10,
-        )
+        connection = get_database_connection()
 
         predictions = pd.read_sql_query(
             query,
@@ -151,13 +155,6 @@ def load_risk_history(
     ticker: str,
     days: int = 90,
 ) -> pd.DataFrame:
-    database_url = os.getenv("DATABASE_URL")
-
-    if not database_url:
-        raise RuntimeError(
-            "DATABASE_URL is not set."
-        )
-
     normalized_ticker = str(ticker).strip().upper()
 
     if not normalized_ticker:
@@ -185,10 +182,7 @@ def load_risk_history(
     connection = None
 
     try:
-        connection = psycopg2.connect(
-            database_url,
-            connect_timeout=10,
-        )
+        connection = get_database_connection()
 
         history = pd.read_sql_query(
             query,
@@ -293,6 +287,60 @@ def load_risk_history(
     return history
 
 
+@st.cache_data(
+    ttl=300,
+    show_spinner=False,
+)
+def load_stock_features(
+    ticker: str,
+) -> pd.DataFrame:
+    normalized_ticker = str(ticker).strip().upper()
+
+    if not normalized_ticker:
+        return pd.DataFrame()
+
+    query = """
+        SELECT *
+        FROM inference_dataset_v3
+        WHERE ticker = %s
+        ORDER BY date DESC
+        LIMIT 1;
+    """
+
+    connection = None
+
+    try:
+        connection = get_database_connection()
+
+        features = pd.read_sql_query(
+            query,
+            connection,
+            params=(normalized_ticker,),
+        )
+
+    finally:
+        if connection is not None:
+            connection.close()
+
+    if features.empty:
+        return features
+
+    features["date"] = pd.to_datetime(
+        features["date"],
+        errors="coerce",
+    )
+
+    features["ticker"] = (
+        features["ticker"]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+    )
+
+    return features
+
+
 def clear_prediction_cache() -> None:
     load_predictions.clear()
     load_risk_history.clear()
+    load_stock_features.clear()
