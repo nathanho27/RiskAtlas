@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -12,6 +13,10 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 
+from ai.ai_explanations import (
+    ask_riskatlas,
+    build_stock_context,
+)
 from ai.risk_drivers import generate_risk_drivers
 from data_access import (
     load_risk_history,
@@ -149,7 +154,7 @@ def render_risk_history(
 
 def render_risk_drivers(
     ticker: str,
-) -> list[dict]:
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     st.subheader("Key Risk Drivers")
 
     try:
@@ -162,18 +167,20 @@ def render_risk_drivers(
             "Risk drivers could not be loaded."
         )
         st.caption(str(error))
-        return []
+        return [], {}
 
     if feature_data.empty:
         st.info(
             "No feature data is currently available "
             f"for {ticker}."
         )
-        return []
+        return [], {}
+
+    stock_features = feature_data.iloc[0]
 
     try:
         drivers = generate_risk_drivers(
-            stock_features=feature_data.iloc[0],
+            stock_features=stock_features,
             max_drivers=5,
         )
 
@@ -182,14 +189,15 @@ def render_risk_drivers(
             "Risk drivers could not be generated."
         )
         st.caption(str(error))
-        return []
+        return [], stock_features.to_dict()
 
     if not drivers:
         st.info(
             "No major risk drivers were identified "
             f"for {ticker} using the current thresholds."
         )
-        return []
+
+        return [], stock_features.to_dict()
 
     for index, driver in enumerate(
         drivers,
@@ -238,7 +246,7 @@ def render_risk_drivers(
         "used by the RiskAtlas V3 model."
     )
 
-    return drivers
+    return drivers, stock_features.to_dict()
 
 
 def render_risk_brief(
@@ -247,7 +255,7 @@ def render_risk_brief(
     risk_score: float,
     risk_percentile: float,
     risk_pred: int,
-    drivers: list[dict],
+    drivers: list[dict[str, Any]],
 ) -> None:
     st.subheader("Risk Brief")
 
@@ -305,13 +313,13 @@ def render_risk_brief(
 
     if risk_pred == 1:
         brief_parts.append(
-            "The model's estimated downside-risk probability "
+            "The model's estimated downside-risk signal "
             "exceeds the production alert threshold."
         )
 
     else:
         brief_parts.append(
-            "The model's estimated downside-risk probability "
+            "The model's estimated downside-risk signal "
             "remains below the production alert threshold."
         )
 
@@ -326,12 +334,187 @@ def render_risk_brief(
     )
 
 
+def render_ask_riskatlas(
+    ticker: str,
+    company_name: str,
+    sector: str,
+    risk_level: str,
+    risk_score: float,
+    risk_percentile: float,
+    risk_pred: int,
+    drivers: list[dict[str, Any]],
+    stock_features: dict[str, Any],
+) -> None:
+    st.subheader("Ask RiskAtlas")
+
+    st.caption(
+        "Ask questions about the model's risk assessment, "
+        "risk drivers, trends, and market signals."
+    )
+
+    ticker_state_key = "riskatlas_chat_ticker"
+    messages_state_key = "riskatlas_chat_messages"
+    pending_question_key = "riskatlas_pending_question"
+
+    if st.session_state.get(ticker_state_key) != ticker:
+        st.session_state[ticker_state_key] = ticker
+        st.session_state[messages_state_key] = []
+        st.session_state[pending_question_key] = None
+
+    if messages_state_key not in st.session_state:
+        st.session_state[messages_state_key] = []
+
+    if pending_question_key not in st.session_state:
+        st.session_state[pending_question_key] = None
+
+    stock_context = build_stock_context(
+        ticker=ticker,
+        company_name=company_name,
+        sector=sector,
+        risk_level=risk_level,
+        risk_score=risk_score,
+        risk_percentile=risk_percentile,
+        risk_pred=risk_pred,
+        drivers=drivers,
+        stock_features=stock_features,
+    )
+
+    suggested_questions = [
+        f"Summarize why {ticker} is currently {risk_level.lower()} risk.",
+        "What are the three strongest risk-increasing signals?",
+        "What is helping offset the current risk?",
+        "Explain this like I'm new to investing.",
+    ]
+
+    has_messages = bool(
+        st.session_state[messages_state_key]
+    )
+
+    with st.expander(
+        "Suggested questions",
+        expanded=not has_messages,
+    ):
+        suggestion_columns = st.columns(
+            2,
+            gap="small",
+        )
+
+        for index, suggestion in enumerate(
+            suggested_questions
+        ):
+            column = suggestion_columns[index % 2]
+
+            if column.button(
+                suggestion,
+                key=f"{ticker}_suggestion_{index}",
+                use_container_width=True,
+            ):
+                st.session_state[
+                    pending_question_key
+                ] = suggestion
+
+    for message in st.session_state[
+        messages_state_key
+    ]:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    typed_question = st.chat_input(
+        f"Ask about {ticker}'s risk assessment"
+    )
+
+    question = (
+        typed_question
+        or st.session_state.get(
+            pending_question_key
+        )
+    )
+
+    if question:
+        st.session_state[
+            pending_question_key
+        ] = None
+
+        previous_messages = list(
+            st.session_state[messages_state_key]
+        )
+
+        st.session_state[
+            messages_state_key
+        ].append(
+            {
+                "role": "user",
+                "content": question,
+            }
+        )
+
+        with st.chat_message("user"):
+            st.markdown(question)
+
+        answer = None
+
+        with st.chat_message("assistant"):
+            with st.spinner(
+                "Analyzing RiskAtlas signals..."
+            ):
+                try:
+                    answer = ask_riskatlas(
+                        question=question,
+                        stock_context=stock_context,
+                        conversation_history=(
+                            previous_messages
+                        ),
+                    )
+
+                except Exception as error:
+                    st.error(
+                        "Ask RiskAtlas could not generate "
+                        "a response."
+                    )
+                    st.caption(str(error))
+
+                else:
+                    st.markdown(answer)
+
+        if answer:
+            st.session_state[
+                messages_state_key
+            ].append(
+                {
+                    "role": "assistant",
+                    "content": answer,
+                }
+            )
+
+    if st.session_state[messages_state_key]:
+        if st.button(
+            "Clear conversation",
+            key=f"clear_chat_{ticker}",
+        ):
+            st.session_state[
+                messages_state_key
+            ] = []
+
+            st.session_state[
+                pending_question_key
+            ] = None
+
+            st.rerun()
+
+    st.caption(
+        "Ask RiskAtlas explains model-generated evidence. "
+        "It does not provide investment advice or generate "
+        "the underlying prediction."
+    )
+
+
 def render_stock_lookup(
     df: pd.DataFrame,
 ) -> None:
     ticker_options = sorted(
         df["ticker"]
         .dropna()
+        .unique()
         .tolist()
     )
 
@@ -365,10 +548,37 @@ def render_stock_lookup(
 
     stock = stock_rows.iloc[0]
 
-    risk_score = stock["risk_score"] * 100
-    risk_percentile = stock["risk_percentile"] * 100
-    risk_pred = int(stock["risk_pred"])
-    alert_status = get_alert_status(risk_pred)
+    risk_score = float(
+        stock["risk_score"]
+    ) * 100
+
+    risk_percentile = float(
+        stock["risk_percentile"]
+    ) * 100
+
+    risk_pred = int(
+        stock["risk_pred"]
+    )
+
+    alert_status = get_alert_status(
+        risk_pred
+    )
+
+    company_name = (
+        stock.get(
+            "company_name",
+            selected_ticker,
+        )
+        or selected_ticker
+    )
+
+    sector = (
+        stock.get(
+            "sector",
+            "Unknown",
+        )
+        or "Unknown"
+    )
 
     col1, col2, col3, col4, col5 = st.columns(
         5,
@@ -405,7 +615,7 @@ def render_stock_lookup(
             f"${stock['adj_close']:,.2f}",
         )
 
-    drivers = render_risk_drivers(
+    drivers, stock_features = render_risk_drivers(
         ticker=selected_ticker,
     )
 
@@ -420,4 +630,16 @@ def render_stock_lookup(
         risk_percentile=risk_percentile,
         risk_pred=risk_pred,
         drivers=drivers,
+    )
+
+    render_ask_riskatlas(
+        ticker=selected_ticker,
+        company_name=str(company_name),
+        sector=str(sector),
+        risk_level=stock["risk_level"],
+        risk_score=risk_score,
+        risk_percentile=risk_percentile,
+        risk_pred=risk_pred,
+        drivers=drivers,
+        stock_features=stock_features,
     )
