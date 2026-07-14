@@ -105,12 +105,12 @@ Potential use cases include:
 - LightGBM benchmarking
 - Random Forest hyperparameter tuning
 - Stable modular Streamlit application
-
-### In Development
-
 - Historical risk-score tracking
 - Model-derived risk drivers
 - AI-generated explanations
+
+### In Development
+
 - Automated daily pipeline execution
 - Cloud deployment
 
@@ -239,9 +239,13 @@ Random Forest V3
         ↓
 current_risk_predictions_v3
         ↓
-Streamlit Dashboard
+inference_dataset_v3
         ↓
-AI Explanations
+Risk Driver Engine
+        ↓
+Risk Brief Generation
+        ↓
+Streamlit Dashboard
 ```
 
 ---
@@ -509,14 +513,16 @@ Provides a market-wide summary including:
 
 Allows users to inspect individual securities.
 
-Current and planned information includes:
+Current functionality includes:
 
 - Risk score
 - Risk percentile
 - Risk level
 - Latest price
-- Historical risk trends
-- AI explanation
+- Historical risk tracking
+- Risk-driver analysis
+- Risk briefs
+- Model explanations
 
 ### Top Risk Stocks
 
@@ -541,20 +547,19 @@ Explains:
 
 ---
 
-## AI Explanation Layer
+## Explainability Layer
 
-A future LLM-powered explanation layer will translate structured model evidence into readable risk summaries.
+RiskAtlas includes a model-aware explainability framework that converts engineered features into interpretable risk drivers.
 
-The machine-learning model remains responsible for generating predictions.
+Rather than exposing only a risk score, the platform identifies:
 
-The AI layer focuses on interpretation.
+- Risk-increasing factors
+- Protective factors
+- Relative performance signals
+- Market sensitivity signals
+- Trend conditions
 
-Rather than showing only a score, RiskAtlas will explain:
-
-- Why a stock is considered risky
-- Which signals contributed most
-- How the stock compares with peers
-- What conditions are driving the signal
+These drivers are combined into stock-level risk briefs that provide context around each prediction.
 
 Example:
 
@@ -744,7 +749,12 @@ pip install -r requirements.txt
 ### Configure PostgreSQL
 
 ```bash
-export DATABASE_URL="postgresql://username:password@localhost:5432/risk_atlas"
+Update the PostgreSQL connection settings inside:
+
+src/app/data_access.py
+src/models/prediction_v3.py
+
+to match your local PostgreSQL environment.
 ```
 
 ### Build Feature Tables
@@ -806,11 +816,10 @@ streamlit run src/app/app.py
 
 ### Explainability
 
-- Feature-level risk drivers
 - Model contribution analysis
-- Risk-driver decomposition
-- AI-generated risk summaries
-- Natural-language explanations
+- SHAP explanations
+- Natural-language narrative generation
+- LLM-enhanced risk commentary
 
 ### Modeling
 
