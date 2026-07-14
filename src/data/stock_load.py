@@ -5,16 +5,57 @@ Output:
 raw_market_prices(date,ticker,adj_close)
 """
 
-import pandas as pd
-import yfinance as yf
-import psycopg2
+import os
+from datetime import timedelta
 from io import StringIO
+
+import pandas as pd
+import psycopg2
 import requests
+import yfinance as yf
 
 
-# establish connection to local PostgreSQL database
+# establish connection to local or cloud PostgreSQL database
 def get_connection():
-    return psycopg2.connect(dbname="risk_atlas",user="nathanho",host="localhost",port="5432")
+    database_url = os.getenv("DATABASE_URL")
+
+    if database_url:
+        return psycopg2.connect(
+            database_url,
+            sslmode="require",
+        )
+
+    return psycopg2.connect(
+        dbname="risk_atlas",
+        user="nathanho",
+        host="localhost",
+        port="5432",
+    )
+
+
+# get most recent market date already stored in PostgreSQL
+def get_latest_market_date():
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS raw_market_prices(
+                    date DATE NOT NULL,
+                    ticker TEXT NOT NULL,
+                    adj_close DOUBLE PRECISION NOT NULL,
+                    PRIMARY KEY(date,ticker)
+                );
+            """)
+
+            cur.execute("""
+                SELECT MAX(date)
+                FROM raw_market_prices;
+            """)
+
+            latest_date=cur.fetchone()[0]
+
+        conn.commit()
+
+    return latest_date
 
 
 # fetch S&P 500 ticker universe from Wikipedia and clean symbols for Yahoo Finance
@@ -38,67 +79,139 @@ def get_market_prices(tickers,start_date="2010-01-01"):
     for i in range(0,len(tickers),chunk_size):
         chunk=tickers[i:i+chunk_size]
         print(f"Downloading {i+1}-{i+len(chunk)} of {len(tickers)} ({round((i+len(chunk))/len(tickers)*100,1)}%)")
+
         try:
-            raw=yf.download(chunk,start=start_date,progress=False,threads=False,auto_adjust=True)
+            raw=yf.download(
+                chunk,
+                start=start_date,
+                progress=False,
+                threads=True,
+                auto_adjust=True
+            )
+
         except Exception as e:
             print(f"Error downloading chunk: {e}")
             continue
+
         if raw.empty:
             print("No data returned for chunk")
             continue
+
         # extract adjusted closing prices and reshape to long format
         prices=raw["Close"]
+
         prices=(prices.reset_index()
             .melt(id_vars="Date",var_name="ticker",value_name="adj_close")
             .rename(columns={"Date":"date"})
             .dropna())
+
         all_prices.append(prices)
+
     if not all_prices:
         return pd.DataFrame(columns=["date","ticker","adj_close"])
+
     prices=pd.concat(all_prices,ignore_index=True)
+
     prices=(prices
         .drop_duplicates(subset=["date","ticker"])
         .sort_values(["ticker","date"])
         .reset_index(drop=True))
+
     return prices
 
 
-# store cleaned price data into PostgreSQL and create indexes for faster queries
+# store cleaned price data into PostgreSQL and update existing rows
 def save_to_db(df):
     if df.empty:
         raise ValueError("No market data downloaded")
+
     df["date"]=pd.to_datetime(df["date"])
     df["ticker"]=df["ticker"].astype(str).str.upper()
     df["adj_close"]=df["adj_close"].astype(float)
+
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-DROP TABLE IF EXISTS raw_market_prices;
+                CREATE TABLE IF NOT EXISTS raw_market_prices(
+                    date DATE NOT NULL,
+                    ticker TEXT NOT NULL,
+                    adj_close DOUBLE PRECISION NOT NULL,
+                    PRIMARY KEY(date,ticker)
+                );
+            """)
 
-CREATE TABLE raw_market_prices(
-    date DATE NOT NULL,
-    ticker TEXT NOT NULL,
-    adj_close DOUBLE PRECISION NOT NULL,
-    PRIMARY KEY(date,ticker)
-);
-""")
+            cur.execute("""
+                CREATE TEMP TABLE market_price_batch(
+                    date DATE NOT NULL,
+                    ticker TEXT NOT NULL,
+                    adj_close DOUBLE PRECISION NOT NULL
+                ) ON COMMIT DROP;
+            """)
+
             buffer=StringIO()
             df.to_csv(buffer,index=False,header=False)
             buffer.seek(0)
-            cur.copy_from(buffer,"raw_market_prices",sep=",")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_ticker ON raw_market_prices(ticker);")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_date ON raw_market_prices(date);")
+
+            cur.copy_from(
+                buffer,
+                "market_price_batch",
+                sep=","
+            )
+
+            cur.execute("""
+                INSERT INTO raw_market_prices(
+                    date,
+                    ticker,
+                    adj_close
+                )
+                SELECT
+                    date,
+                    ticker,
+                    adj_close
+                FROM market_price_batch
+                ON CONFLICT(date,ticker)
+                DO UPDATE SET
+                    adj_close=EXCLUDED.adj_close;
+            """)
+
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_ticker
+                ON raw_market_prices(ticker);
+            """)
+
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_date
+                ON raw_market_prices(date);
+            """)
+
         conn.commit()
 
 
-# run full pipeline fetch tickers download prices save to database
+# run incremental pipeline fetch tickers download prices save to database
 def main():
     tickers=get_sp500_tickers()
     print(f"Total tickers: {len(tickers)}")
-    df=get_market_prices(tickers)
+
+    latest_date=get_latest_market_date()
+
+    if latest_date is None:
+        start_date="2010-01-01"
+        print(f"No existing data found. Downloading from {start_date}")
+    else:
+        start_date=(latest_date-timedelta(days=7)).isoformat()
+        print(f"Latest stored date: {latest_date}")
+        print(f"Downloading updates from: {start_date}")
+
+    df=get_market_prices(
+        tickers,
+        start_date=start_date
+    )
+
     print(f"Rows: {len(df):,}")
     print(f"Unique tickers: {df['ticker'].nunique()}")
+
     save_to_db(df)
+
     print("Finished saving to database")
 
 

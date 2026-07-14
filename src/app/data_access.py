@@ -1,7 +1,7 @@
 import pandas as pd
 import psycopg2
 import streamlit as st
-
+import os
 
 DB_NAME = "risk_atlas"
 DB_USER = "nathanho"
@@ -9,15 +9,21 @@ DB_HOST = "localhost"
 DB_PORT = "5432"
 
 
-def get_database_connection():
+def get_connection():
+    database_url = os.getenv("DATABASE_URL")
+
+    if database_url:
+        return psycopg2.connect(
+            database_url,
+            sslmode="require",
+        )
+
     return psycopg2.connect(
         dbname=DB_NAME,
         user=DB_USER,
         host=DB_HOST,
         port=DB_PORT,
-        connect_timeout=10,
     )
-
 
 @st.cache_data(
     ttl=300,
@@ -44,7 +50,7 @@ def load_predictions() -> pd.DataFrame:
     connection = None
 
     try:
-        connection = get_database_connection()
+        connection = get_connection()
 
         predictions = pd.read_sql_query(
             query,
@@ -182,7 +188,7 @@ def load_risk_history(
     connection = None
 
     try:
-        connection = get_database_connection()
+        connection = get_connection()
 
         history = pd.read_sql_query(
             query,
@@ -310,7 +316,7 @@ def load_stock_features(
     connection = None
 
     try:
-        connection = get_database_connection()
+        connection = get_connection()
 
         features = pd.read_sql_query(
             query,

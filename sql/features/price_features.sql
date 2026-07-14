@@ -2,6 +2,8 @@
 -- builds momentum, volatility, trend, and downside-risk features
 -- used as model inputs for risk prediction
 
+SET work_mem = '256MB';
+
 DROP TABLE IF EXISTS price_features CASCADE;
 
 CREATE TABLE price_features AS

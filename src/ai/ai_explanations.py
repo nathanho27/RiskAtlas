@@ -26,6 +26,7 @@ def build_stock_context(
     ticker: str,
     company_name: str,
     sector: str,
+    sub_industry: str,
     risk_level: str,
     risk_score: float,
     risk_percentile: float,
@@ -37,16 +38,29 @@ def build_stock_context(
     Convert RiskAtlas model output into structured Gemini context.
     """
 
+    features = stock_features or {}
+
     context = {
-        "ticker": ticker,
-        "company_name": company_name,
-        "sector": sector,
-        "risk_level": risk_level,
-        "risk_score": round(float(risk_score), 4),
-        "risk_percentile": round(float(risk_percentile), 2),
-        "production_alert_triggered": bool(risk_pred),
+        "company": {
+            "ticker": ticker,
+            "company_name": company_name,
+            "sector": sector,
+            "sub_industry": sub_industry,
+        },
+        "risk_assessment": {
+            "risk_level": risk_level,
+            "risk_score": round(float(risk_score), 4),
+            "risk_percentile": round(
+                float(risk_percentile),
+                2,
+            ),
+            "production_alert_triggered": bool(
+                risk_pred
+            ),
+            "prediction_horizon": "10 trading days",
+        },
         "risk_drivers": drivers,
-        "latest_model_features": stock_features or {},
+        "latest_model_features": features,
     }
 
     return json.dumps(
@@ -94,6 +108,14 @@ Rules:
 - Do not repeat the entire risk assessment when answering follow-up questions.
 - Do not restate the entire stock assessment unless the user requests a summary.
 - Use only the RiskAtlas context below.
+- Use the supplied company name, sector, and sub-industry as background context.
+- You may describe the company's general business category using those fields.
+- Do not invent specific products, customers, revenue sources, operations,
+  competitors, company events, or business developments that are not supplied.
+- Distinguish between company metadata and model-generated risk evidence.
+- Do not imply that a company's industry alone caused the current risk score.
+- If asked for company details beyond the supplied metadata, clearly state that
+  RiskAtlas does not currently contain that information.
 - Do not invent news, earnings results, analyst opinions, economic events,
   company events, or statistics.
 - Clearly say when the available data is insufficient.

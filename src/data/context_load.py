@@ -4,6 +4,7 @@
 
 from io import StringIO
 
+import os
 import pandas as pd
 import psycopg2
 import requests
@@ -18,13 +19,20 @@ DB_PORT = "5432"
 
 
 def get_connection():
+    database_url = os.getenv("DATABASE_URL")
+
+    if database_url:
+        return psycopg2.connect(
+            database_url,
+            sslmode="require",
+        )
+
     return psycopg2.connect(
         dbname=DB_NAME,
         user=DB_USER,
         host=DB_HOST,
         port=DB_PORT,
     )
-
 
 def get_benchmark_prices(start_date="2010-01-01"):
     raw = yf.download(

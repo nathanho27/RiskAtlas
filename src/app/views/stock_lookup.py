@@ -338,6 +338,7 @@ def render_ask_riskatlas(
     ticker: str,
     company_name: str,
     sector: str,
+    sub_industry: str,
     risk_level: str,
     risk_score: float,
     risk_percentile: float,
@@ -371,6 +372,7 @@ def render_ask_riskatlas(
         ticker=ticker,
         company_name=company_name,
         sector=sector,
+        sub_industry=sub_industry,
         risk_level=risk_level,
         risk_score=risk_score,
         risk_percentile=risk_percentile,
@@ -564,20 +566,25 @@ def render_stock_lookup(
         risk_pred
     )
 
-    company_name = (
-        stock.get(
+    company_name = str(
+        stock_features.get(
             "company_name",
             selected_ticker,
         )
-        or selected_ticker
     )
 
-    sector = (
-        stock.get(
+    sector = str(
+        stock_features.get(
             "sector",
             "Unknown",
         )
-        or "Unknown"
+    )
+
+    sub_industry = str(
+        stock_features.get(
+            "sub_industry",
+            "Unknown",
+        )
     )
 
     col1, col2, col3, col4, col5 = st.columns(
@@ -636,6 +643,7 @@ def render_stock_lookup(
         ticker=selected_ticker,
         company_name=str(company_name),
         sector=str(sector),
+        sub_industry=str(sub_industry),
         risk_level=stock["risk_level"],
         risk_score=risk_score,
         risk_percentile=risk_percentile,
