@@ -24,6 +24,12 @@ The project combines data engineering, SQL analytics, feature engineering, machi
 
 What started as a simple stock-risk prediction model evolved into a context-aware intelligence platform that incorporates market regimes, market breadth, sector-relative performance, and market sensitivity to better understand downside risk.
 
+500 stocks
+1.83 million observations
+16 years of history
+Random Forest production model
+ROC-AUC 0.6349
+
 ---
 
 ## Table of Contents
@@ -354,7 +360,10 @@ Users can:
 - Inspect model results
 - Review risk distributions
 
-Future versions will incorporate historical tracking and AI-powered explanations.
+Current functionality includes:
+- Historical risk tracking
+- Risk driver analysis
+- AI-powered RiskAtlas chat
 
 ---
 
@@ -643,8 +652,10 @@ Project philosophy:
 
 ### AI
 
-- OpenAI API *(planned)*
-- Structured LLM Outputs *(planned)*
+Google Gemini
+Context-Aware RiskAtlas Assistant
+LLM-Powered Risk Explanations
+Conversational Risk Analysis
 - Model-Aware Explanations *(planned)*
 
 ### Development
@@ -695,6 +706,8 @@ RiskAtlas/
 ├── src/
 │   │
 │   ├── ai/
+│   │   ├── ai_explanations.py
+│   │   ├── risk_drivers.py
 │   │
 │   ├── app/
 │   │   ├── app.py
