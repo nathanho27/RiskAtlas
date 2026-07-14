@@ -667,6 +667,7 @@ Conversational Risk Analysis
 
 ## Project Structure
 
+```
 RiskAtlas/
 │
 ├── README.md
@@ -734,6 +735,7 @@ RiskAtlas/
 │   └── __init__.py
 │
 └── .vscode/
+```
 
 ---
 
