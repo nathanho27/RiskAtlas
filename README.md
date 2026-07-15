@@ -1,16 +1,19 @@
 # RiskAtlas
 
-Current Production Model:
+**Current Production Model:**  
 Random Forest V3
 
-Universe:
+**Universe:**  
 500 U.S. Equities
 
-Prediction Horizon:
+**Prediction Horizon:**  
 10 Trading Days
 
-Latest Test Performance:
+**Latest Test Performance:**  
 ROC-AUC 0.6349 | PR-AUC 0.2180
+
+**Production Pipeline Runtime:**  
+Approximately 1.3 Minutes
 
 ## Context-Aware Stock Risk Intelligence Platform
 
@@ -24,11 +27,12 @@ The project combines data engineering, SQL analytics, feature engineering, machi
 
 What started as a simple stock-risk prediction model evolved into a context-aware intelligence platform that incorporates market regimes, market breadth, sector-relative performance, and market sensitivity to better understand downside risk.
 
-500 stocks
-1.83 million observations
-16 years of history
-Random Forest production model
-ROC-AUC 0.6349
+- 500 stocks
+- 1.83 million observations
+- 16 years of history
+- Random Forest production model
+- ROC-AUC 0.6349
+- 1.3-minute production pipeline
 
 ---
 
@@ -42,14 +46,14 @@ ROC-AUC 0.6349
 - [Business Problem](#business-problem)
 - [System Architecture](#system-architecture)
 - [How RiskAtlas Works](#how-riskatlas-works)
-- [Context-Aware Modeling (V3)](#context-aware-modeling-v3)
+- [Production Pipeline](#production-pipeline)
+- [Context-Aware Modeling V3](#context-aware-modeling-v3)
 - [Streamlit Application](#streamlit-application)
-- [AI Explanation Layer](#ai-explanation-layer)
-- [Future Modeling](#future-modeling)
+- [Explainability Layer](#explainability-layer)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [How To Run](#how-to-run)
-- [Future Development](#future-development)
+- [What I Learned](#what-i-learned)
 
 ---
 
@@ -88,37 +92,41 @@ Potential use cases include:
 
 ## Current Status
 
-### Completed
+RiskAtlas is functionally complete as a local production-style application.
+
+Completed components include:
 
 - S&P 500 universe ingestion
 - Historical market data ingestion
+- Incremental daily market updates
 - PostgreSQL database architecture
 - SQL cleaning and transformation layers
 - Financial feature engineering
 - Downside-risk label generation
-- Logistic Regression baseline model
-- Random Forest benchmark model
-- Chronological train / validation / test framework
+- Logistic Regression baseline modeling
+- Random Forest modeling
+- XGBoost benchmarking
+- LightGBM benchmarking
+- Chronological train, validation, and test framework
 - Validation-based threshold optimization
-- Daily risk prediction generation
-- PostgreSQL prediction storage
-- Streamlit dashboard prototype
 - Context-aware V3 feature engineering
 - Market regime modeling
 - Market breadth analytics
-- Sector-relative feature framework
-- XGBoost benchmarking
-- LightGBM benchmarking
+- Sector-relative features
+- Market sensitivity features
+- Cross-sectional rankings
 - Random Forest hyperparameter tuning
+- Daily risk prediction generation
+- Current prediction storage
+- Historical prediction tracking
 - Stable modular Streamlit application
-- Historical risk-score tracking
 - Model-derived risk drivers
-- AI-generated explanations
+- Gemini-powered risk explanations
+- Conversational RiskAtlas assistant
+- Unified production pipeline
+- Optimized latest-date inference workflow
 
-### In Development
-
-- Automated daily pipeline execution
-- Cloud deployment
+The remaining work is limited to cloud deployment and scheduled pipeline execution.
 
 ---
 
@@ -132,7 +140,7 @@ Potential use cases include:
 
 RiskAtlas currently serves predictions using Random Forest V3.
 
-The model was selected after outperforming all benchmarked alternatives on a fully held-out test set while maintaining stable live behavior across the production universe.
+The model was selected after outperforming all benchmarked alternatives on a fully held-out test set while maintaining stable behavior across the production universe.
 
 Dataset:
 
@@ -151,7 +159,7 @@ Dataset:
 | XGBoost V3 | 0.6260 | 0.1947 |
 | LightGBM V3 | 0.6169 | 0.1891 |
 
-Random Forest V3 currently represents the strongest out-of-sample performance achieved within the RiskAtlas framework.
+Random Forest V3 represents the strongest out-of-sample performance achieved within the RiskAtlas framework.
 
 ---
 
@@ -159,7 +167,7 @@ Random Forest V3 currently represents the strongest out-of-sample performance ac
 
 The biggest lesson from RiskAtlas V3 was that market context matters.
 
-The strongest predictors of downside risk were not stock-specific indicators.
+The strongest predictors of downside risk were not exclusively stock-specific indicators.
 
 The most important features included:
 
@@ -170,9 +178,9 @@ The most important features included:
 - SPY 20-day volatility
 - Percentage of stocks above MA50
 
-These findings suggest that market regime and market participation are more predictive of future downside-risk events than many traditional stock-level indicators.
+These findings suggest that market regime and market participation contain meaningful predictive information beyond traditional stock-level indicators.
 
-This insight motivated the transition from stock-centric modeling in V2 to the context-aware architecture used in V3.
+This insight motivated the transition from the stock-centric modeling approach used in V2 to the context-aware architecture used in V3.
 
 ---
 
@@ -233,7 +241,7 @@ Historical Market Data
         ↓
 PostgreSQL Database
         ↓
-SQL Cleaning & Transformation
+SQL Cleaning and Transformation
         ↓
 Feature Engineering
         ↓
@@ -243,13 +251,15 @@ Machine Learning Models
         ↓
 Random Forest V3
         ↓
-current_risk_predictions_v3
-        ↓
 inference_dataset_v3
+        ↓
+Current Risk Predictions
+        ↓
+Historical Prediction Storage
         ↓
 Risk Driver Engine
         ↓
-Risk Brief Generation
+Gemini Explanation Layer
         ↓
 Streamlit Dashboard
 ```
@@ -266,8 +276,12 @@ RiskAtlas begins by collecting:
 - Historical market data
 - Daily price history
 - Volume data
+- SPY market context
+- Company and sector metadata
 
 Python ingestion pipelines retrieve and load the data into PostgreSQL for downstream processing.
+
+The production workflow uses incremental updates so that only recent market data is downloaded during daily execution rather than reloading the full historical dataset.
 
 ---
 
@@ -282,6 +296,8 @@ The transformation layer is responsible for:
 - Standardization
 - Rolling calculations
 - Dataset preparation
+- Index creation
+- Production inference preparation
 
 This creates a consistent analytical foundation for feature engineering and modeling.
 
@@ -289,13 +305,14 @@ This creates a consistent analytical foundation for feature engineering and mode
 
 ### 3. Feature Engineering
 
-Raw prices are transformed into predictive signals.
+Raw market prices are transformed into predictive signals.
 
 Core features include:
 
 - Momentum
 - Volatility
 - Downside volatility
+- Worst recent returns
 - Drawdowns
 - Distance from highs
 - Moving-average relationships
@@ -324,7 +341,7 @@ This target becomes the supervised learning label used during model training.
 
 ### 5. Model Training
 
-RiskAtlas currently benchmarks multiple machine-learning models:
+RiskAtlas benchmarked multiple machine-learning models:
 
 - Logistic Regression
 - Random Forest
@@ -333,6 +350,8 @@ RiskAtlas currently benchmarks multiple machine-learning models:
 
 All models use chronological train, validation, and test splits to better simulate real-world deployment and reduce look-ahead bias.
 
+The production model is a tuned Random Forest using 27 engineered features.
+
 ---
 
 ### 6. Prediction Generation
@@ -340,11 +359,14 @@ All models use chronological train, validation, and test splits to better simula
 The production pipeline generates:
 
 - Risk probabilities
-- Risk classifications
+- Binary risk classifications
 - Risk percentiles
 - Relative rankings
+- Risk levels
 
 Predictions are written back into PostgreSQL where they become available to the application layer.
+
+Current predictions are stored separately from historical prediction records so that the application can display both the latest market state and changes in modeled risk over time.
 
 ---
 
@@ -354,20 +376,60 @@ The Streamlit dashboard serves as the primary interface for interacting with mod
 
 Users can:
 
-- Explore current risk conditions
-- View high-risk securities
+- Explore current market-wide risk conditions
+- View the highest-risk securities
 - Search individual stocks
 - Inspect model results
 - Review risk distributions
-
-Current functionality includes:
-- Historical risk tracking
-- Risk driver analysis
-- AI-powered RiskAtlas chat
+- Track historical risk scores
+- Analyze model-derived risk drivers
+- Generate AI-powered risk explanations
+- Ask questions through the RiskAtlas assistant
 
 ---
 
-## Context-Aware Modeling (V3)
+## Production Pipeline
+
+RiskAtlas uses a single production entry point:
+
+```bash
+python run_pipeline.py
+```
+
+The pipeline performs the complete daily workflow:
+
+1. Refreshes market price data
+2. Downloads only recent incremental updates
+3. Refreshes SPY market context
+4. Refreshes company and sector metadata
+5. Rebuilds the staging market-price table
+6. Rebuilds rolling price features
+7. Creates the latest inference dataset
+8. Loads the Random Forest V3 model artifact
+9. Generates current risk predictions
+10. Updates current and historical prediction tables
+
+A recent production execution processed updates for 503 tickers, generated predictions for 499 eligible stocks, and completed successfully in approximately 1.3 minutes.
+
+### Pipeline Optimization
+
+The original production workflow took approximately 10 minutes to complete.
+
+The optimized pipeline completes in approximately 1.3 minutes, representing an estimated 87% reduction in runtime.
+
+The primary improvements included:
+
+- Replacing full historical market reloads with incremental updates
+- Downloading only a recent overlapping date window
+- Limiting production inference to the latest available trading date
+- Reducing the inference dataset from approximately 1.83 million rows to 499 current stock observations
+- Preserving identical prediction outputs while reducing database and compute workload
+
+The feature-engineering layer still maintains the historical data required for rolling calculations, while the final inference table contains only the latest eligible observation for each stock.
+
+---
+
+## Context-Aware Modeling V3
 
 The biggest lesson from RiskAtlas V2 was that the model already understood what a stock was doing.
 
@@ -391,7 +453,7 @@ Most stocks are trading below trend
 
 A stock falling less than its peers may actually be demonstrating relative strength.
 
-Likewise, a stock falling alongside a broad market selloff may not be exhibiting unusual risk at all.
+Likewise, a stock falling alongside a broad market selloff may not be exhibiting unusual company-specific risk.
 
 RiskAtlas V3 was built around this idea.
 
@@ -420,9 +482,10 @@ What is this stock doing relative to:
 - 20-day volatility
 - 60-day volatility
 - Downside volatility
-- Drawdowns
-- Distance from highs
-- Moving-average relationships
+- Worst recent return
+- Drawdown from the 60-day high
+- Distance from the 52-week high
+- Price relative to the 200-day moving average
 
 #### Market Regime Features
 
@@ -430,37 +493,39 @@ What is this stock doing relative to:
 - SPY 60-day return
 - SPY 20-day volatility
 - SPY 60-day volatility
-- SPY drawdowns
+- SPY drawdown from the 60-day high
 
 #### Market Breadth Features
 
+- Percentage of stocks with positive 20-day returns
 - Percentage of stocks above MA50
 - Percentage of stocks above MA200
-- Positive-return breadth
 
 #### Sector Context Features
 
-- Return relative to sector
-- Volatility relative to sector
+- 20-day return relative to sector
+- 60-day return relative to sector
+- 20-day volatility relative to sector
 
 #### Market Sensitivity Features
 
-- Rolling beta
-- Rolling market correlation
+- Rolling 60-day beta
+- Rolling 60-day market correlation
 
 #### Cross-Sectional Ranking Features
 
-- Return percentiles
-- Volatility percentiles
-- Drawdown percentiles
-- Sector-relative percentiles
+- 20-day return percentile
+- 20-day volatility percentile
+- Drawdown percentile
+- Sector return percentile
+- Sector volatility percentile
 
 ### Dataset
 
 - Approximately 1.83 million observations
 - Approximately 500 S&P 500 stocks
 - Historical coverage from 2010–2026
-- Chronological train / validation / test framework
+- Chronological train, validation, and test framework
 
 ### Model Benchmarking
 
@@ -487,7 +552,7 @@ ROC-AUC: 0.6349
 PR-AUC : 0.2180
 ```
 
-Performance Improvements:
+Performance improvements:
 
 ```text
 ROC-AUC: +0.0219
@@ -500,7 +565,7 @@ The results validate the importance of context-aware feature engineering and dem
 
 ## Streamlit Application
 
-The dashboard currently tracks 500 stocks and surfaces:
+The dashboard tracks approximately 500 stocks and surfaces:
 
 - Risk scores
 - Risk percentiles
@@ -522,7 +587,7 @@ Provides a market-wide summary including:
 
 Allows users to inspect individual securities.
 
-Current functionality includes:
+Functionality includes:
 
 - Risk score
 - Risk percentile
@@ -530,14 +595,14 @@ Current functionality includes:
 - Latest price
 - Historical risk tracking
 - Risk-driver analysis
-- Risk briefs
+- AI-generated risk briefs
 - Model explanations
 
 ### Top Risk Stocks
 
 Ranks securities by current modeled downside risk.
 
-Planned functionality includes:
+Functionality includes:
 
 - Risk-level filtering
 - Relative risk comparisons
@@ -552,7 +617,6 @@ Explains:
 - Methodology
 - Prediction workflow
 - Model evolution
-
 
 ---
 
@@ -595,31 +659,7 @@ The machine-learning model generates the score.
 
 The AI layer explains the evidence.
 
----
-
-## Future Modeling
-
-The primary lesson from V3 was that feature engineering generated larger gains than model complexity.
-
-Adding market-regime awareness, breadth indicators, sector-relative performance metrics, and market-sensitivity features produced meaningful improvements across multiple model families.
-
-Future research directions include:
-
-- VIX integration
-- Treasury-yield features
-- Credit-spread indicators
-- Earnings-event proximity
-- Probability calibration
-- Regime-specific models
-- Alternative labeling frameworks
-- Explainability systems
-- Automated model monitoring
-
-RiskAtlas will continue benchmarking new models, but a model will only replace the current leader if it demonstrates superior out-of-sample performance on a fully held-out test set.
-
-Project philosophy:
-
-> Better information beats more complexity.
+RiskAtlas also includes a Gemini-powered conversational assistant that allows users to ask questions about current stock-risk conditions using model outputs and engineered risk drivers.
 
 ---
 
@@ -635,7 +675,8 @@ Project philosophy:
 
 - PostgreSQL
 - SQL
-- SQL Window Functions
+- SQL window functions
+- Incremental data ingestion
 
 ### Machine Learning
 
@@ -644,6 +685,7 @@ Project philosophy:
 - Random Forest
 - XGBoost
 - LightGBM
+- joblib
 
 ### Visualization
 
@@ -652,22 +694,23 @@ Project philosophy:
 
 ### AI
 
-Google Gemini
-Context-Aware RiskAtlas Assistant
-LLM-Powered Risk Explanations
-Conversational Risk Analysis
-- Model-Aware Explanations *(planned)*
+- Google Gemini
+- Context-aware RiskAtlas assistant
+- LLM-powered risk explanations
+- Conversational risk analysis
+- Model-aware risk briefs
 
 ### Development
 
 - Git
 - GitHub
+- Python virtual environments
 
 ---
 
 ## Project Structure
 
-```
+```text
 RiskAtlas/
 │
 ├── README.md
@@ -689,26 +732,22 @@ RiskAtlas/
 │   └── v3_rf_tuning_results.csv
 │
 ├── sql/
-│   │
 │   ├── schema/
 │   ├── staging/
 │   ├── marts/
 │   ├── analytics/
-│   │
 │   ├── features/
 │   │   ├── price_features.sql
 │   │   ├── model_dataset.sql
 │   │   ├── label_generation.sql
 │   │   ├── feature_engineering_v3.sql
 │   │   └── inference_engineering_v3.sql
-│   │
 │   └── models/
 │
 ├── src/
-│   │
 │   ├── ai/
 │   │   ├── ai_explanations.py
-│   │   ├── risk_drivers.py
+│   │   └── risk_drivers.py
 │   │
 │   ├── app/
 │   │   ├── app.py
@@ -741,14 +780,14 @@ RiskAtlas/
 
 ## How To Run
 
-### Clone Repository
+### Clone the Repository
 
 ```bash
 git clone https://github.com/nathanho27/RiskAtlas.git
 cd RiskAtlas
 ```
 
-### Create Virtual Environment
+### Create a Virtual Environment
 
 ```bash
 python -m venv .venv
@@ -763,99 +802,59 @@ pip install -r requirements.txt
 
 ### Configure PostgreSQL
 
-```bash
-Update the PostgreSQL connection settings inside:
-
-src/app/data_access.py
-src/models/prediction_v3.py
-
-to match your local PostgreSQL environment.
-```
-
-### Build Feature Tables
-
-Run the SQL feature engineering pipeline:
-
-```sql
-sql/features/price_features.sql
-sql/features/model_dataset.sql
-sql/features/label_generation.sql
-sql/features/feature_engineering_v3.sql
-sql/features/inference_engineering_v3.sql
-```
-
-### Train Models
-
-Production Logistic Regression:
+Configure the database connection through the `DATABASE_URL` environment variable.
 
 ```bash
-python src/models/model_training_logistic_v2.py
+export DATABASE_URL="postgresql://username:password@host:5432/database"
 ```
 
-V3 Benchmarking:
+The Gemini explanation layer requires a Gemini API key:
 
 ```bash
-python src/models/model_training_v3.py
+export GEMINI_API_KEY="your-api-key"
 ```
 
-V3 Random Forest Tuning:
+### Run the Production Pipeline
 
 ```bash
-python src/models/random_forest_tuning_v3.py
+python run_pipeline.py
 ```
 
-### Generate Predictions
+This command:
 
-```bash
-python src/models/prediction_v3.py
-```
+- Refreshes market data
+- Refreshes market and company context
+- Executes the SQL transformation pipeline
+- Rebuilds the latest inference dataset
+- Loads the Random Forest V3 model
+- Generates current risk predictions
+- Updates current and historical prediction tables
 
-### Launch Dashboard
+### Launch the Dashboard
 
 ```bash
 streamlit run src/app/app.py
 ```
 
----
+### Run Model Scripts Independently
 
-## Future Development
+V3 model benchmarking:
 
-### Application
+```bash
+python src/models/model_training_v3.py
+```
 
-- Historical risk-score tracking
-- Watchlists
-- Saved stock monitoring
-- Advanced filtering
-- Export functionality
-- Historical prediction review
+V3 Random Forest tuning:
 
-### Explainability
+```bash
+python src/models/random_forest_tuning_v3.py
+```
 
-- Model contribution analysis
-- SHAP explanations
-- Natural-language narrative generation
-- LLM-enhanced risk commentary
+V3 prediction generation:
 
-### Modeling
-
-- VIX integration
-- Treasury-yield features
-- Credit-spread indicators
-- Earnings-event proximity
-- Probability calibration
-- Regime-specific models
-- Alternative labeling frameworks
-- Ensemble modeling
-- Model monitoring
-
-### Infrastructure
-
-- Automated data ingestion
-- Automated feature generation
-- Daily prediction generation
-- Cloud deployment
-- Monitoring and alerting
-- Scheduled retraining pipeline
+```bash
+python src/models/prediction_v3.py
+```
 
 ---
 
@@ -871,14 +870,21 @@ Moving from stock-centric features to context-aware features produced a larger i
 
 The V3 experiments showed that market regime, market breadth, and relative positioning contain meaningful predictive information that traditional stock-level indicators often miss.
 
+The production optimization process also reinforced the importance of designing efficient data workflows rather than repeatedly processing an entire historical dataset.
+
+By introducing incremental updates and latest-date inference, RiskAtlas reduced production runtime from approximately 10 minutes to 1.3 minutes while preserving identical prediction outputs.
+
 This project reinforced the importance of:
 
 - Feature engineering
-- Proper train / validation / test methodology
+- Proper train, validation, and test methodology
 - Out-of-sample evaluation
 - Context-aware modeling
+- Incremental data processing
+- Efficient production inference
+- Modular application development
 - Building complete end-to-end systems rather than isolated models
 
 RiskAtlas ultimately became much more than a machine-learning experiment.
 
-It evolved into a full-stack data science project combining data engineering, analytics, machine learning, application development, and AI-assisted interpretation into a single workflow.
+It evolved into a full-stack data science project combining data engineering, analytics, machine learning, application development, production optimization, and AI-assisted interpretation into a single workflow.
