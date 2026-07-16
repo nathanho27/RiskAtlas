@@ -536,12 +536,6 @@ def render_stock_lookup(
         options=ticker_options,
         index=default_index,
     )
-    
-    st.markdown(f"### {company_name}")
-    st.caption(f"{sector} • {sub_industry}")
-
-    # metric cards below
-    col1, col2, col3, col4, col5 = st.columns(5)
 
     stock_rows = df.loc[
         df["ticker"].eq(selected_ticker)
@@ -633,6 +627,9 @@ def render_stock_lookup(
             "Unknown",
         )
     )
+    
+    st.markdown(f"### {company_name}")
+    st.caption(f"{sector} • {sub_industry}")
 
     render_risk_history(
         ticker=selected_ticker,
