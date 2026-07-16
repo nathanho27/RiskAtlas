@@ -4,7 +4,7 @@ numpy
 plotly
 psycopg2-binary
 python-dotenv
-google-generativeai
+google-genai
 sqlalchemy
 scikit-learn
 joblib
