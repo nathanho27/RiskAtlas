@@ -1,0 +1,15 @@
+streamlit
+pandas
+numpy
+plotly
+psycopg2-binary
+python-dotenv
+google-generativeai
+sqlalchemy
+scikit-learn
+joblib
+requests
+lxml
+yfinance
+xgboost
+lightgbm
