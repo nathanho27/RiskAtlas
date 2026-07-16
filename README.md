@@ -4,7 +4,7 @@
 Random Forest V3
 
 **Universe:**  
-500 U.S. Equities
+S&P 500 Universe (503 Constituents, ~499 Eligible Daily Predictions)
 
 **Prediction Horizon:**  
 10 Trading Days
@@ -23,7 +23,7 @@ Rather than simply describing what has already happened in the market, RiskAtlas
 
 > Which stocks currently show the highest modeled downside risk, how unusual is that risk, and what signals are driving it?
 
-The project combines data engineering, SQL analytics, feature engineering, machine learning, risk scoring, visualization, and AI-powered explainability into a single production-style workflow.
+The project combines data engineering, cloud infrastructure, SQL analytics, feature engineering, machine learning, risk scoring, visualization, and AI-powered explainability into a single production-style workflow.
 
 What started as a simple stock-risk prediction model evolved into a context-aware intelligence platform that incorporates market regimes, market breadth, sector-relative performance, and market sensitivity to better understand downside risk.
 
@@ -100,6 +100,9 @@ Completed components include:
 - Historical market data ingestion
 - Incremental daily market updates
 - PostgreSQL database architecture
+- Google Cloud SQL production warehouse
+- Cloud database migration from Neon to GCP
+- Production PostgreSQL deployment
 - SQL cleaning and transformation layers
 - Financial feature engineering
 - Downside-risk label generation
@@ -126,7 +129,7 @@ Completed components include:
 - Unified production pipeline
 - Optimized latest-date inference workflow
 
-The remaining work is limited to cloud deployment and scheduled pipeline execution.
+The core platform is complete. Remaining work is limited to public application deployment and scheduled daily pipeline execution.
 
 ---
 
@@ -409,7 +412,7 @@ The pipeline performs the complete daily workflow:
 9. Generates current risk predictions
 10. Updates current and historical prediction tables
 
-A recent production execution processed updates for 503 tickers, generated predictions for 499 eligible stocks, and completed successfully in approximately 1.3 minutes.
+A recent production execution processed updates for 503 S&P 500 constituents, generated predictions for 499 eligible securities, wrote results to a Google Cloud SQL warehouse, and completed successfully in approximately 1.3 minutes.
 
 ### Pipeline Optimization
 
@@ -674,9 +677,17 @@ RiskAtlas also includes a Gemini-powered conversational assistant that allows us
 ### Data Engineering
 
 - PostgreSQL
+- Google Cloud SQL
 - SQL
 - SQL window functions
 - Incremental data ingestion
+
+### Cloud Infrastructure
+
+- Google Cloud Platform (GCP)
+- Cloud SQL
+- Cloud Storage
+- Cloud Database Migration
 
 ### Machine Learning
 
@@ -884,6 +895,8 @@ This project reinforced the importance of:
 - Efficient production inference
 - Modular application development
 - Building complete end-to-end systems rather than isolated models
+
+The project also provided hands-on experience with cloud database migration, production PostgreSQL infrastructure, and deploying analytics systems on Google Cloud Platform.
 
 RiskAtlas ultimately became much more than a machine-learning experiment.
 
