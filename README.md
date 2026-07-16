@@ -1,5 +1,7 @@
 # RiskAtlas
 
+Live Demo: https://riskatlas.streamlit.app/
+
 **Current Production Model:**  
 Random Forest V3
 
@@ -39,6 +41,7 @@ What started as a simple stock-risk prediction model evolved into a context-awar
 ## Table of Contents
 
 - [Project Overview](#project-overview)
+- [Application Preview](#application-preview)
 - [Current Status](#current-status)
 - [Latest Results](#latest-results)
 - [Key Findings](#key-findings)
@@ -87,6 +90,54 @@ Potential use cases include:
 - Equity research
 - Market surveillance
 - Early identification of deteriorating conditions
+
+## Application Preview
+
+### Overview Dashboard
+
+![Overview Dashboard](images/overview.png)
+
+---
+
+### Risk Percentile Analysis
+
+![Risk Percentile](images/risk_percentile.png)
+
+---
+
+### Key Risk Drivers
+
+![Key Risk Drivers](images/key_risk_drivers.png)
+
+---
+
+### AI Risk Brief
+
+![Risk Brief](images/risk_brief.png)
+
+---
+
+### Ask RiskAtlas
+
+![Ask RiskAtlas](images/ask_risk_atlas.png)
+
+---
+
+### AI Assistant
+
+![AI Assistant](images/ai_assistant.png)
+
+---
+
+### Top Risk Stocks
+
+![Top Risk Stocks](images/riskiest_stocks.png)
+
+---
+
+### Model Insights
+
+![Model Insights](images/model_insights.png)
 
 ---
 
