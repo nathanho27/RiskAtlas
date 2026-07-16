@@ -7,7 +7,9 @@ from data_access import (
 from views.model_insights import render_model_insights
 from views.overview import render_overview
 from views.stock_lookup import render_stock_lookup
+from dotenv import load_dotenv
 
+load_dotenv()
 
 st.set_page_config(
     page_title="RiskAtlas",

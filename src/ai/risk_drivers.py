@@ -523,31 +523,47 @@ def generate_risk_drivers(
                 value=return_20d_vs_sector,
             )
 
-    if return_60d_vs_sector <= -0.15:
-        if return_60d is not None and return_60d > 0:
-            title = "Lagging a strong sector"
-            explanation = (
-                f"{ticker} gained {return_60d:.1%} over 60 days, "
-                f"but trailed its sector benchmark by "
-                f"{abs(return_60d_vs_sector):.1%}."
-            )
-        else:
-            title = "Persistent sector underperformance"
-            explanation = (
-                f"{ticker} underperformed its sector benchmark by "
-                f"{abs(return_60d_vs_sector):.1%} over 60 days."
+    if return_60d_vs_sector is not None:
+        if return_60d_vs_sector <= -0.15:
+            if return_60d is not None and return_60d > 0:
+                title = "Lagging a strong sector"
+                explanation = (
+                    f"{ticker} gained {return_60d:.1%} over 60 days, "
+                    f"but trailed its sector benchmark by "
+                    f"{abs(return_60d_vs_sector):.1%}."
+                )
+            else:
+                title = "Persistent sector underperformance"
+                explanation = (
+                    f"{ticker} underperformed its sector benchmark by "
+                    f"{abs(return_60d_vs_sector):.1%} over 60 days."
+                )
+
+            _add_driver(
+                drivers,
+                category="Sector",
+                title=title,
+                explanation=explanation,
+                direction="risk",
+                severity=5,
+                feature="return_60d_vs_sector",
+                value=return_60d_vs_sector,
             )
 
-    _add_driver(
-        drivers,
-        category="Sector",
-        title=title,
-        explanation=explanation,
-        direction="risk",
-        severity=5,
-        feature="return_60d_vs_sector",
-        value=return_60d_vs_sector,
-    )
+        elif return_60d_vs_sector <= -0.07:
+            _add_driver(
+                drivers,
+                category="Sector",
+                title="Medium-term sector underperformance",
+                explanation=(
+                    f"{ticker} underperformed its sector benchmark by "
+                    f"{abs(return_60d_vs_sector):.1%} over 60 days."
+                ),
+                direction="risk",
+                severity=4,
+                feature="return_60d_vs_sector",
+                value=return_60d_vs_sector,
+            )
 
     if vol_20_vs_sector is not None:
         if vol_20_vs_sector >= 1.50:

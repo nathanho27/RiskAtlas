@@ -1,7 +1,9 @@
 import os
 
 import psycopg2
+from dotenv import load_dotenv
 
+load_dotenv()
 
 database_url = os.getenv(
     "DATABASE_URL"
@@ -26,7 +28,7 @@ cursor = connection.cursor()
 cursor.execute(
     """
     SELECT COUNT(*)
-    FROM current_risk_predictions;
+    FROM current_risk_predictions_v3;
     """
 )
 

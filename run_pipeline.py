@@ -7,7 +7,8 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-
+from dotenv import load_dotenv
+load_dotenv()
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 

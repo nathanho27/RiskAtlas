@@ -28,7 +28,7 @@ def get_alert_status(risk_pred: int) -> str:
     return (
         "Triggered"
         if risk_pred == 1
-        else "Below Threshold"
+        else "No Alert"
     )
 
 
@@ -509,7 +509,6 @@ def render_ask_riskatlas(
         "the underlying prediction."
     )
 
-
 def render_stock_lookup(
     df: pd.DataFrame,
 ) -> None:
@@ -566,27 +565,6 @@ def render_stock_lookup(
         risk_pred
     )
 
-    company_name = str(
-        stock_features.get(
-            "company_name",
-            selected_ticker,
-        )
-    )
-
-    sector = str(
-        stock_features.get(
-            "sector",
-            "Unknown",
-        )
-    )
-
-    sub_industry = str(
-        stock_features.get(
-            "sub_industry",
-            "Unknown",
-        )
-    )
-
     col1, col2, col3, col4, col5 = st.columns(
         5,
         gap="medium",
@@ -607,7 +585,7 @@ def render_stock_lookup(
     with col3:
         st.metric(
             "Risk Level",
-            stock["risk_level"],
+            str(stock["risk_level"]),
         )
 
     with col4:
@@ -619,12 +597,38 @@ def render_stock_lookup(
     with col5:
         st.metric(
             "Latest Price",
-            f"${stock['adj_close']:,.2f}",
+            f"${float(stock['adj_close']):,.2f}",
         )
 
     drivers, stock_features = render_risk_drivers(
         ticker=selected_ticker,
     )
+
+    if not stock_features:
+        stock_features = stock.to_dict()
+
+    company_name = str(
+        stock_features.get(
+            "company_name",
+            selected_ticker,
+        )
+    )
+
+    sector = str(
+        stock_features.get(
+            "sector",
+            "Unknown",
+        )
+    )
+
+    sub_industry = str(
+        stock_features.get(
+            "sub_industry",
+            "Unknown",
+        )
+    )
+    st.markdown(f"### {company_name}")
+    st.caption(f"{sector} • {sub_industry}")
 
     render_risk_history(
         ticker=selected_ticker,
@@ -632,7 +636,9 @@ def render_stock_lookup(
 
     render_risk_brief(
         ticker=selected_ticker,
-        risk_level=stock["risk_level"],
+        risk_level=str(
+            stock["risk_level"]
+        ),
         risk_score=risk_score,
         risk_percentile=risk_percentile,
         risk_pred=risk_pred,
@@ -641,10 +647,12 @@ def render_stock_lookup(
 
     render_ask_riskatlas(
         ticker=selected_ticker,
-        company_name=str(company_name),
-        sector=str(sector),
-        sub_industry=str(sub_industry),
-        risk_level=stock["risk_level"],
+        company_name=company_name,
+        sector=sector,
+        sub_industry=sub_industry,
+        risk_level=str(
+            stock["risk_level"]
+        ),
         risk_score=risk_score,
         risk_percentile=risk_percentile,
         risk_pred=risk_pred,
